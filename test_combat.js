@@ -230,6 +230,61 @@ t('resolveDamage 缺 fighter → 只算连击+弱点', () => {
   return eq(r.dmg, 108);
 });
 
+// ── 9.5 资源分化 ──
+console.log('\n[9.5] 资源分化（怒气/法力/充能）');
+t('RESOURCE_DEFS 3 职业', () => Object.keys(C.RESOURCE_DEFS).length === 3);
+t('战士怒气 max100', () => C.RESOURCE_DEFS.warrior.type === 'rage' && C.RESOURCE_DEFS.warrior.max === 100);
+t('法师法力 max150', () => C.RESOURCE_DEFS.mage.type === 'mana' && C.RESOURCE_DEFS.mage.max === 150);
+t('道士充能 max80', () => C.RESOURCE_DEFS.taoist.type === 'focus' && C.RESOURCE_DEFS.taoist.max === 80);
+t('战士怒气脱战衰减', () => C.RESOURCE_DEFS.warrior.decayPerSec === 5);
+t('法师法力被动恢复', () => C.RESOURCE_DEFS.mage.passiveRegen === 8);
+t('makeResource 初始满', () => { const r = C.makeResource('warrior'); return r.current === r.max; });
+t('makeResource 非法职业兜底', () => { const r = C.makeResource('unknown'); return r.type === 'mana'; });
+t('spendResource 够扣返回 true', () => { const r = C.makeResource('warrior'); return C.spendResource(r, 30) && r.current === 70; });
+t('spendResource 不够返回 false', () => { const r = C.makeResource('warrior'); return !C.spendResource(r, 999) && r.current === 100; });
+t('resourcePct 正常', () => { const r = C.makeResource('warrior'); return C.resourcePct(r) === 1; });
+t('resourcePct 半血 ≈ 0.5', () => { const r = C.makeResource('warrior'); r.current = 50; return Math.abs(C.resourcePct(r) - 0.5) < 0.01; });
+t('tickResource 脱战怒气衰减', () => { const r = C.makeResource('warrior'); r.current = 50; const r2 = C.tickResource(r, 'warrior', false, 1); return r2.current < 50; });
+t('tickResource 脱战法力恢复', () => { const r = C.makeResource('mage'); r.current = 50; const r2 = C.tickResource(r, 'mage', false, 1); return r2.current > 50; });
+t('onHitResourceGain 怒气增长', () => { const r = C.makeResource('warrior'); r.current = 50; C.onHitResourceGain(r, 'warrior'); return r.current === 54; });
+t('onHurtResourceGain 怒气增长', () => { const r = C.makeResource('warrior'); r.current = 50; C.onHurtResourceGain(r, 'warrior'); return r.current === 53; });
+t('法师受击不产生资源', () => { const r = C.makeResource('mage'); r.current = 50; const old = r.current; C.onHurtResourceGain(r, 'mage'); return r.current === old; });
+
+// ── 10. 状态连锁 dot→引爆 ──
+console.log('\n[10] 状态连锁 dot→引爆');
+t('dot 类型常量 4 种', () => C.DOT_TYPES.length === 4);
+t('空 fighter 安全返回 0', () => C.getDotStacks(null, 'burn') === 0);
+t('新 fighter dot 为 0', () => { const f = C.makeFighter(); return C.getDotStacks(f, 'burn') === 0; });
+t('applyDot 返回 1 层', () => { const f = C.makeFighter(); return C.applyDot(f, 'burn', Date.now()) === 1; });
+t('两次 applyDot = 2 层', () => { const f = C.makeFighter(); C.applyDot(f, 'burn', Date.now()); return C.applyDot(f, 'burn', Date.now()) === 2; });
+t('各类型独立计数', () => {
+  const f = C.makeFighter(); C.applyDot(f, 'burn', Date.now()); C.applyDot(f, 'burn', Date.now());
+  C.applyDot(f, 'poison', Date.now());
+  return C.getDotStacks(f, 'burn') === 2 && C.getDotStacks(f, 'poison') === 1;
+});
+t('无效类型返回 0', () => C.applyDot(C.makeFighter(), 'invalid', Date.now()) === 0);
+t('applyDotStacks 批量应用', () => { const f = C.makeFighter(); return C.applyDotStacks(f, 'bleed', 10, Date.now()) === 10; });
+t('tickDotDamage 0 层 = 0', () => { const f = C.makeFighter(); return C.tickDotDamage(f, 'burn', 1000) === 0; });
+t('tickDotDamage 5 层 > 0', () => { const f = C.makeFighter(); C.applyDotStacks(f, 'burn', 5, Date.now()); return C.tickDotDamage(f, 'burn', 1000) > 0; });
+t('低于阈值不引爆', () => { const f = C.makeFighter(); C.applyDotStacks(f, 'burn', 4, Date.now()); const r = C.triggerDotExplosion(f, 'burn', 1000); return !r.exploded && r.stacks === 4; });
+t('达到阈值引爆', () => {
+  const f = C.makeFighter(); C.applyDotStacks(f, 'burn', 5, Date.now());
+  const r = C.triggerDotExplosion(f, 'burn', 1000);
+  return r.exploded && r.dmg > 0 && r.stacks >= 5;
+});
+t('引爆后层数归零', () => {
+  const f = C.makeFighter(); C.applyDotStacks(f, 'burn', 6, Date.now());
+  C.triggerDotExplosion(f, 'burn', 1000);
+  return C.getDotStacks(f, 'burn') === 0;
+});
+t('triggerAllExplosions 全类型', () => {
+  const f = C.makeFighter();
+  C.applyDotStacks(f, 'burn', 7, Date.now()); C.applyDotStacks(f, 'poison', 6, Date.now());
+  C.applyDotStacks(f, 'bleed', 5, Date.now()); C.applyDotStacks(f, 'frostbite', 4, Date.now());
+  const r = C.triggerAllExplosions(f, 1000);
+  return r.results.burn.exploded && r.results.poison.exploded && r.results.bleed.exploded && !r.results.frostbite.exploded && r.totalDmg > 0;
+});
+
 console.log('\n==== 结果：' + pass + ' 通过 / ' + fail + ' 失败 ====');
 if (fail > 0) { console.log('失败项：'); fails.forEach(x => console.log('  - ' + x)); process.exit(1); }
 else { console.log('全部通过 ✅'); process.exit(0); }

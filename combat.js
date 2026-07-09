@@ -76,6 +76,8 @@
       // 供游戏层施加的 DoT 标记（本模块只记录意图，伤害由游戏结算）
       pendingBurn: 0,
       pendingDot: 0,
+      // 状态连锁 dot 层（_dots[type] = [{expires}]）
+      _dots: null,
     };
   }
 
@@ -183,6 +185,148 @@
     };
   }
 
+  // ── 状态连锁 dot→引爆（§5 状态连锁）────────────────────
+  // 设计意图：让"堆叠dot→引爆爆发"成为战斗中的次要战术决策，
+  // 给持续伤害流玩家一个 clear payoff moment，而非纯线性伤害。
+  const DOT_TYPES = ['burn', 'poison', 'bleed', 'frostbite'];
+  const DOT_EXPLOSION_THRESHOLD = 5;    // 叠满 5 层可引爆
+  const DOT_EXPLOSION_BASE_MULT = 0.30; // 引爆伤害 = 层数 × 基础倍率 × 目标最大生命
+  const DOT_EXPLOSION_SCALE = 0.08;     // 每层额外伤害倍率
+  const DOT_STACK_DURATION = 6000;      // ms，每层独立过期时间
+  const DOT_TICK_INTERVAL = 1000;       // ms，每 tick 间隔
+  const DOT_TICK_DMG = 0.02;            // 每 tick 伤害 = 层数 × 目标最大生命 × 此值
+
+  // 获取 dot 层数（安全访问）
+  function getDotStacks(f, type) {
+    if (!f || !f._dots) return 0;
+    const d = f._dots[type];
+    if (!d) return 0;
+    // 清理过期层
+    const now = Date.now();
+    const alive = d.filter(s => s.expires > now);
+    f._dots[type] = alive;
+    return alive.length;
+  }
+
+  // 应用一层 dot（返回当前总层数）
+  function applyDot(f, type, now) {
+    if (!f || !DOT_TYPES.includes(type)) return 0;
+    if (!f._dots) f._dots = {};
+    if (!f._dots[type]) f._dots[type] = [];
+    f._dots[type].push({ expires: now + DOT_STACK_DURATION });
+    // 清理过期
+    const alive = f._dots[type].filter(s => s.expires > now);
+    f._dots[type] = alive;
+    return alive.length;
+  }
+
+  // 应用多层 dot（快捷批量）
+  function applyDotStacks(f, type, stacks, now) {
+    let total = 0;
+    for (let i = 0; i < stacks; i++) total = applyDot(f, type, now);
+    return total;
+  }
+
+  // 计算 dot tick 伤害（按目标最大生命百分比，调用者每秒调一次）
+  function tickDotDamage(f, type, maxHp) {
+    const stacks = getDotStacks(f, type);
+    if (stacks === 0) return 0;
+    return Math.max(1, Math.round(maxHp * DOT_TICK_DMG * stacks));
+  }
+
+  // 引爆：若 dot 层数 ≥ 阈值，消耗全部层数并返回爆炸伤害
+  // 返回 { exploded: bool, dmg: number, stacks: number }
+  function triggerDotExplosion(f, type, maxHp) {
+    const stacks = getDotStacks(f, type);
+    if (stacks < DOT_EXPLOSION_THRESHOLD) return { exploded: false, dmg: 0, stacks };
+    // 消耗所有层
+    if (f._dots) f._dots[type] = [];
+    const mult = DOT_EXPLOSION_BASE_MULT + stacks * DOT_EXPLOSION_SCALE;
+    const dmg = Math.max(1, Math.round(maxHp * mult));
+    return { exploded: true, dmg, stacks };
+  }
+
+  // 全类型引爆（AOE 场景）
+  function triggerAllExplosions(f, maxHp) {
+    const results = {};
+    for (const t of DOT_TYPES) {
+      results[t] = triggerDotExplosion(f, t, maxHp);
+    }
+    const totalDmg = Object.values(results).reduce((s, r) => s + (r.exploded ? r.dmg : 0), 0);
+    return { results, totalDmg };
+  }
+
+  // ── 资源分化（§6 怒气/法力/充能）─────────────────────────
+  // 设计意图：让三职业有截然不同的资源循环节奏
+  // 战士=怒气(战斗获取/脱战衰减) 法师=法力(自然恢复) 道士=充能(时间积累)
+  const RESOURCE_DEFS = {
+    warrior: { type: 'rage',     max: 100, decayPerSec: 5,  hitGain: 4,   dmgTakenGain: 3,  passiveRegen: 0 },
+    mage:    { type: 'mana',     max: 150, decayPerSec: 0,  hitGain: 1,   dmgTakenGain: 0,  passiveRegen: 8 },
+    taoist:  { type: 'focus',    max: 80,  decayPerSec: 2,  hitGain: 2,   dmgTakenGain: 1,  passiveRegen: 4 },
+  };
+
+  function makeResource(prof) {
+    const def = RESOURCE_DEFS[prof] || RESOURCE_DEFS.mage;
+    return {
+      type: def.type,
+      current: def.max,
+      max: def.max,
+      decayPerSec: def.decayPerSec,
+      hitGain: def.hitGain,
+      dmgTakenGain: def.dmgTakenGain,
+      passiveRegen: def.passiveRegen,
+    };
+  }
+
+  // 获取当前资源百分比 (0~1)
+  function resourcePct(res) {
+    if (!res || !res.max) return 1;
+    return Math.min(1, Math.max(0, res.current / res.max));
+  }
+
+  // 消耗资源：返回是否够扣
+  function spendResource(res, cost) {
+    if (!res || !cost) return true;
+    if (res.current < cost) return false;
+    res.current -= cost;
+    return true;
+  }
+
+  // 每帧(tick)更新资源
+  // 返回修改后的 resource 对象（或新创建）
+  function tickResource(res, prof, inCombat, dtSec) {
+    if (!res) res = makeResource(prof);
+    const def = RESOURCE_DEFS[prof] || RESOURCE_DEFS.mage;
+    if (!inCombat) {
+      if (def.type === 'rage') {
+        res.current = Math.max(0, res.current - def.decayPerSec * dtSec);
+      } else {
+        res.current = Math.min(res.max, res.current + def.passiveRegen * dtSec);
+      }
+    } else {
+      if (def.type !== 'rage') {
+        res.current = Math.min(res.max, res.current + def.passiveRegen * dtSec);
+      }
+    }
+    return res;
+  }
+
+  // 攻击命中时返还资源
+  function onHitResourceGain(res, prof) {
+    if (!res) return res;
+    const def = RESOURCE_DEFS[prof] || RESOURCE_DEFS.mage;
+    res.current = Math.min(res.max, res.current + def.hitGain);
+    return res;
+  }
+
+  // 受击时返还资源（仅战士怒气受益）
+  function onHurtResourceGain(res, prof) {
+    if (!res) return res;
+    const def = RESOURCE_DEFS[prof] || RESOURCE_DEFS.mage;
+    res.current = Math.min(res.max, res.current + def.dmgTakenGain);
+    return res;
+  }
+
   // ── 处决 ──
   // opts: { isHeavy, dmgType, execPctBoss, execHpThreshold }
   function executeResult(f, now, opts) {
@@ -216,12 +360,18 @@
   const Combat = {
     COMBO_WINDOW, BOSS_COMBO_ATTEN, FINISHER_K, FINISHER_CAP, REACTION_WINDOW,
     EXEC_PCT_BOSS, EXEC_HP_THRESHOLD, VULN_MULT,
+    DOT_TYPES, DOT_EXPLOSION_THRESHOLD, DOT_EXPLOSION_BASE_MULT, DOT_EXPLOSION_SCALE,
+    DOT_STACK_DURATION, DOT_TICK_INTERVAL, DOT_TICK_DMG,
     COMBO_TIERS, REACTIONS, ELEMENTS,
     makeFighter, registerCombo, expireCombo, comboDamageBonus, comboCritBonus,
     finisherAvailable, finisherMultiplier,
     weaknessMultiplier, computeReaction, processElementHit,
     addPoise, checkBreak, isBroken, vulnerableMult, executeResult, resolveDamage,
     interruptResult,
+    getDotStacks, applyDot, applyDotStacks, tickDotDamage,
+    triggerDotExplosion, triggerAllExplosions,
+    RESOURCE_DEFS, makeResource, resourcePct, spendResource,
+    tickResource, onHitResourceGain, onHurtResourceGain,
     reactKey, clamp,
   };
 

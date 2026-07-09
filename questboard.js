@@ -182,37 +182,38 @@
   const WEEKLY_POOL = [
     { id: 'w_hunt',  difficulty: 'D3', weight: 100, minLevel: 1,
       objectives: [{ type: 'kill', target: 'any', amount: 80, desc: '本周击杀 80 只怪物' }],
-      rewards: { exp: 600, gold: 1200, token: 60 } },
+      rewards: { exp: 600, gold: 1200, token: 60, stone: 15, material: 5 } },
     { id: 'w_wolf',  difficulty: 'D3', weight: 80, minLevel: 3,
       objectives: [{ type: 'kill', target: 'wolf', amount: 50, desc: '狩猎 50 只野狼' }],
-      rewards: { exp: 600, gold: 1200, token: 60 } },
+      rewards: { exp: 600, gold: 1200, token: 60, stone: 10, material: 3 } },
     { id: 'w_skel',  difficulty: 'D3', weight: 75, minLevel: 5,
       objectives: [{ type: 'kill', target: 'skeleton', amount: 40, desc: '肃清 40 具骷髅' }],
-      rewards: { exp: 600, gold: 1200, token: 60 } },
+      rewards: { exp: 600, gold: 1200, token: 60, stone: 12, material: 4 } },
     { id: 'w_elite', difficulty: 'D4', weight: 70, minLevel: 6,
       objectives: [{ type: 'kill', target: 'elite', amount: 10, desc: '讨伐 10 只精英' }],
-      rewards: { exp: 1200, gold: 2400, token: 120 } },
+      rewards: { exp: 1200, gold: 2400, token: 120, stone: 30, material: 10 } },
     { id: 'w_boss',  difficulty: 'D5', weight: 40, minLevel: 10,
       objectives: [{ type: 'kill', target: 'boss', amount: 3, desc: '击败 3 个首领' }],
-      rewards: { exp: 2400, gold: 4800, token: 240 } },
+      rewards: { exp: 2400, gold: 4800, token: 240, stone: 60, material: 20 } },
   ];
 
   // ── 12. 成就系统（§3，永久解锁，基于累计统计）──────────
-  // metric 对应 makeStats() 的累计键；threshold 为达成阈值；reward 发放 achPoints（成就点）+ 附带金币/代币。
+  // metric 对应 makeStats() 的累计键；threshold 为达成阈值；reward 发放 achPoints（成就点）+ 附带金币/代币/石料。
+  // stone: 强化石（用于装备强化材料消耗）；material: 锻造材料（用于洗练/重铸替代金币）
   const ACHIEVEMENTS = [
-    { id: 'a_kill_100',  name: '初试身手', desc: '累计击杀 100 只怪物',      metric: 'kills',      threshold: 100,  reward: { achPoints: 10, gold: 300, bindGold: 50 } },
-    { id: 'a_kill_1000', name: '百战之士', desc: '累计击杀 1000 只怪物',     metric: 'kills',      threshold: 1000, reward: { achPoints: 30, gold: 1500, bindGold: 200, jade: 5 } },
-    { id: 'a_boss_1',    name: '屠龙者',   desc: '击败 1 个首领',            metric: 'bossKills',  threshold: 1,    reward: { achPoints: 20, gold: 800, token: 20, bindGold: 50 } },
-    { id: 'a_boss_10',   name: '首领克星', desc: '击败 10 个首领',           metric: 'bossKills',  threshold: 10,   reward: { achPoints: 50, gold: 3000, token: 80, bindGold: 300, jade: 8 } },
-    { id: 'a_elite_50',  name: '精英猎手', desc: '讨伐 50 只精英',           metric: 'eliteKills', threshold: 50,   reward: { achPoints: 40, gold: 2000, token: 40, bindGold: 150, jade: 3 } },
-    { id: 'a_lv_10',     name: '崭露头角', desc: '达到等级 10',              metric: 'maxLevel',   threshold: 10,   reward: { achPoints: 10, gold: 500, bindGold: 50 } },
-    { id: 'a_lv_30',     name: '一方豪杰', desc: '达到等级 30',              metric: 'maxLevel',   threshold: 30,   reward: { achPoints: 30, gold: 2000, token: 50, bindGold: 200, jade: 5 } },
-    { id: 'a_enh_15',    name: '千锤百炼', desc: '将任意装备强化至 +15',      metric: 'maxEnhance', threshold: 15,   reward: { achPoints: 40, gold: 2500, token: 60, bindGold: 200, jade: 5 } },
-    { id: 'a_set_2',     name: '初成体系', desc: '集齐任意套装 2 件',        metric: 'setMax2',    threshold: 1,    reward: { achPoints: 20, gold: 1000, token: 20, bindGold: 80 } },
-    { id: 'a_set_4',     name: '套装大成', desc: '集齐任意套装 4 件',        metric: 'setMax4',    threshold: 1,    reward: { achPoints: 60, gold: 3500, token: 100, bindGold: 300, jade: 10 } },
-    { id: 'a_react_50',  name: '元素亲和', desc: '触发 50 次元素反应',        metric: 'reactions',  threshold: 50,   reward: { achPoints: 30, gold: 1500, token: 30, bindGold: 100, jade: 2 } },
-    { id: 'a_break_30',  name: '破防大师', desc: '造成 30 次破防',            metric: 'breaks',     threshold: 30,   reward: { achPoints: 30, gold: 1500, token: 30, bindGold: 100, jade: 2 } },
-    { id: 'a_finish_10', name: '终结者',   desc: '释放 10 次终结技',          metric: 'finishers',  threshold: 10,   reward: { achPoints: 30, gold: 1500, token: 30, bindGold: 100, jade: 2 } },
+    { id: 'a_kill_100',  name: '初试身手', desc: '累计击杀 100 只怪物',      metric: 'kills',      threshold: 100,  reward: { achPoints: 10, gold: 300, bindGold: 50, stone: 5 } },
+    { id: 'a_kill_1000', name: '百战之士', desc: '累计击杀 1000 只怪物',     metric: 'kills',      threshold: 1000, reward: { achPoints: 30, gold: 1500, bindGold: 200, jade: 5, stone: 30, material: 10 } },
+    { id: 'a_boss_1',    name: '屠龙者',   desc: '击败 1 个首领',            metric: 'bossKills',  threshold: 1,    reward: { achPoints: 20, gold: 800, token: 20, bindGold: 50, stone: 8 } },
+    { id: 'a_boss_10',   name: '首领克星', desc: '击败 10 个首领',           metric: 'bossKills',  threshold: 10,   reward: { achPoints: 50, gold: 3000, token: 80, bindGold: 300, jade: 8, stone: 50, material: 20 } },
+    { id: 'a_elite_50',  name: '精英猎手', desc: '讨伐 50 只精英',           metric: 'eliteKills', threshold: 50,   reward: { achPoints: 40, gold: 2000, token: 40, bindGold: 150, jade: 3, stone: 25, material: 8 } },
+    { id: 'a_lv_10',     name: '崭露头角', desc: '达到等级 10',              metric: 'maxLevel',   threshold: 10,   reward: { achPoints: 10, gold: 500, bindGold: 50, stone: 10 } },
+    { id: 'a_lv_30',     name: '一方豪杰', desc: '达到等级 30',              metric: 'maxLevel',   threshold: 30,   reward: { achPoints: 30, gold: 2000, token: 50, bindGold: 200, jade: 5, stone: 40, material: 15 } },
+    { id: 'a_enh_15',    name: '千锤百炼', desc: '将任意装备强化至 +15',      metric: 'maxEnhance', threshold: 15,   reward: { achPoints: 40, gold: 2500, token: 60, bindGold: 200, jade: 5, stone: 100, material: 30 } },
+    { id: 'a_set_2',     name: '初成体系', desc: '集齐任意套装 2 件',        metric: 'setMax2',    threshold: 1,    reward: { achPoints: 20, gold: 1000, token: 20, bindGold: 80, material: 5 } },
+    { id: 'a_set_4',     name: '套装大成', desc: '集齐任意套装 4 件',        metric: 'setMax4',    threshold: 1,    reward: { achPoints: 60, gold: 3500, token: 100, bindGold: 300, jade: 10, stone: 60, material: 25 } },
+    { id: 'a_react_50',  name: '元素亲和', desc: '触发 50 次元素反应',        metric: 'reactions',  threshold: 50,   reward: { achPoints: 30, gold: 1500, token: 30, bindGold: 100, jade: 2, stone: 15 } },
+    { id: 'a_break_30',  name: '破防大师', desc: '造成 30 次破防',            metric: 'breaks',     threshold: 30,   reward: { achPoints: 30, gold: 1500, token: 30, bindGold: 100, jade: 2, material: 10 } },
+    { id: 'a_finish_10', name: '终结者',   desc: '释放 10 次终结技',          metric: 'finishers',  threshold: 10,   reward: { achPoints: 30, gold: 1500, token: 30, bindGold: 100, jade: 2, stone: 20 } },
   ];
 
   // 累计统计对象（成就评估的输入），所有字段非负整数
@@ -247,11 +248,29 @@
     return { newly, unlocked: set };
   }
 
+  // 从奖励对象中提取所有资源类型及数量（含 stone/material）
+  // 返回：{ gold, token, stone, material, bindGold, jade, achPoints, exp }
+  function extractResourceValues(reward) {
+    if (!reward) return {};
+    const keys = ['gold', 'token', 'stone', 'material', 'bindGold', 'jade', 'achPoints', 'exp'];
+    const out = {};
+    for (const k of keys) {
+      if (Number.isFinite(reward[k]) && reward[k] > 0) out[k] = reward[k];
+    }
+    return out;
+  }
+
+  // 奖励对象中是否含 stone/material
+  function hasCraftingRewards(reward) {
+    return !!reward && ((Number.isFinite(reward.stone) && reward.stone > 0) || (Number.isFinite(reward.material) && reward.material > 0));
+  }
+
   return {
     C, DIFFICULTY, TIER_ORDER, clamp,
     computeQualityBonus, questExp, questGold, questToken,
     teamMultiplier, computeRewards, rollLuckyBox,
     isAvailable, pickFromPool, generate,
     WEEKLY_POOL, ACHIEVEMENTS, makeStats, weekKey, evaluateAchievements,
+    extractResourceValues, hasCraftingRewards,
   };
 });

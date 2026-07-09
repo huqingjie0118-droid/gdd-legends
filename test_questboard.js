@@ -218,6 +218,38 @@ t('stats 为 null 抛 TypeError', () => {
   return threw;
 });
 
+// ── 16. 奖励类型扩展 stone/material ──
+console.log('\n[16] 奖励类型扩展（stone/material）');
+t('成就 a_kill_100 含 stone', () => QB.ACHIEVEMENTS.find(a => a.id === 'a_kill_100').reward.stone === 5);
+t('成就 a_boss_10 含 material', () => QB.ACHIEVEMENTS.find(a => a.id === 'a_boss_10').reward.material === 20);
+t('周常 w_hunt 含 stone', () => QB.WEEKLY_POOL.find(t => t.id === 'w_hunt').rewards.stone === 15);
+t('周常 w_elite 含 material', () => QB.WEEKLY_POOL.find(t => t.id === 'w_elite').rewards.material === 10);
+t('extractResourceValues 返回所有键', () => {
+  const r = QB.extractResourceValues({ gold: 100, stone: 5, material: 3 });
+  return r.gold === 100 && r.stone === 5 && r.material === 3;
+});
+t('extractResourceValues 过滤零值', () => {
+  const r = QB.extractResourceValues({ gold: 100, stone: 0 });
+  return r.stone === undefined && r.gold === 100;
+});
+t('extractResourceValues 空对象', () => {
+  return Object.keys(QB.extractResourceValues(null)).length === 0;
+});
+t('hasCraftingRewards 有 stone', () => QB.hasCraftingRewards({ stone: 5 }));
+t('hasCraftingRewards 无 crafting', () => !QB.hasCraftingRewards({ gold: 100 }));
+t('所有成就 reward 含 stone 或 material', () => {
+  return QB.ACHIEVEMENTS.every(a => {
+    const r = a.reward;
+    return (Number.isFinite(r.stone) && r.stone >= 0) || (Number.isFinite(r.material) && r.material >= 0);
+  });
+});
+t('所有周常 reward 含 stone 和 material', () => {
+  return QB.WEEKLY_POOL.every(t => {
+    const r = t.rewards;
+    return Number.isFinite(r.stone) && r.stone > 0 && Number.isFinite(r.material) && r.material > 0;
+  });
+});
+
 // ── 汇总 ──
 console.log('\n========================================');
 console.log(`通过 ${pass} / 失败 ${fail}`);
