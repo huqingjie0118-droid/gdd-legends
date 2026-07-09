@@ -4271,8 +4271,9 @@ function renderCorePanel() {
   const inv = window.playerCoreInv;
   const c = document.getElementById('core-content'); if (!c) return;
   // 套装检查
-  const setLv = CoreSystem.checkSetBonus(loadout);
-  const setDesc = CoreSystem.SET_BONUSES[setLv] ? CoreSystem.SET_BONUSES[setLv].desc : '无套装效果';
+  const setResult = CoreSystem.checkSetBonus(loadout);
+  const setLv = setResult.level;
+  const setDesc = setResult.desc || '无套装效果';
   const totalB = CoreSystem.calcTotalBonuses(loadout);
   // 核心槽
   let html = '<div class="core-grid">';
