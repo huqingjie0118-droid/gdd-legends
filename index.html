@@ -935,7 +935,7 @@ const CFG = {
 
 // ==================== 武器类型与攻击距离 ====================
 // 仅战士职业受武器类型影响，法师/道士使用技能固定距离
-const WEAPON_TYPES = {
+var WEAPON_TYPES = {
   dagger:  { name: '短剑', range: 80,  desc: '极近距离·攻速快',   icon: '🗡️', atkMult: 1.0, atkSpeed: 1.15 },
   sword:   { name: '长剑', range: 110, desc: '中距离·均衡',      icon: '⚔️', atkMult: 1.0, atkSpeed: 1.0  },
   polearm: { name: '长柄', range: 150, desc: '远距离·高伤害',    icon: '🔱', atkMult: 1.15, atkSpeed: 0.85 },
@@ -943,7 +943,7 @@ const WEAPON_TYPES = {
   bow:     { name: '弓',   range: 250, desc: '远程·通用',        icon: '🏹', atkMult: 1.0, atkSpeed: 0.9  },
 };
 // 战士职业可选武器池（短剑/长剑/长柄）
-const WARRIOR_WEAPONS = ['dagger', 'sword', 'polearm'];
+var WARRIOR_WEAPONS = ['dagger', 'sword', 'polearm'];
 // 非战士武器默认使用标准近战距离
 function getDefaultWeaponType(prof) {
   return prof === 'warrior' ? 'sword' : 'staff';
