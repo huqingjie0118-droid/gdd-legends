@@ -110,5 +110,6 @@
   }
   if (typeof window !== 'undefined') {
     window.destructible = exports;
+    window.Destructible = exports;
   }
 })();

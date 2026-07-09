@@ -115,5 +115,6 @@
   }
   if (typeof window !== 'undefined') {
     window.mount = exports;
+    window.Mount = exports;
   }
 })();

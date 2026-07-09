@@ -113,5 +113,6 @@
   }
   if (typeof window !== 'undefined') {
     window.bodyPart = exports;
+    window.BodyPart = exports;
   }
 })();
