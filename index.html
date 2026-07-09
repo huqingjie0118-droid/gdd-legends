@@ -545,6 +545,11 @@ canvas {
       .bp-btn { flex:1; padding:6px 4px; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; font-family:inherit; transition:filter .15s, transform .1s; }
       .bp-btn:hover { filter:brightness(1.12); }
       .bp-equip { background:linear-gradient(180deg,#ffce4a,#e0a010); color:#2a1a00; }
+      /* 流派觉醒 */
+      .arch-card{transition:border-color .2s}
+      .arch-awaken-btn:hover,.arch-learn-btn:hover{filter:brightness(1.15)}
+      .arch-skill{transition:all .2s}
+      .arch-skill:hover{border-color:#ffd700!important}
       .bp-sell { background:linear-gradient(180deg,#4caf50,#2e7d32); color:#fff; }
       .bp-discard { background:linear-gradient(180deg,#555,#333); color:#ddd; }
       .bp-enhance { background:linear-gradient(180deg,#9a6bff,#6a3fd0); color:#fff; }
@@ -711,11 +716,24 @@ canvas {
     </div>
   </div>
 
+  <!-- ===== 流派觉醒 ===== -->
+  <div id="archetype-panel" style="display:none;">
+    <div id="archetype-modal" class="modal-box">
+      <div class="modal-head">
+        <span class="modal-title">流派觉醒</span>
+        <span id="arch-level-req" class="sp-badge" style="font-size:11px">需 Lv.30</span>
+        <button class="modal-close" type="button" onclick="closeArchetypePanel()">✕</button>
+      </div>
+      <div id="archetype-content" class="modal-body"></div>
+    </div>
+  </div>
+
   <!-- ===== 游戏内账号菜单 ===== -->
   <div id="account-menu" style="display:none;">
     <span id="acc-username" class="acc-user"></span>
     <button class="am-btn" type="button" onclick="Account.openSkill()">技能</button>
     <button class="am-btn" type="button" onclick="Account.openAdv()">进阶</button>
+    <button id="btn-archetype" class="am-btn" type="button" onclick="openArchetypePanel()" style="display:none">流派</button>
     <button class="am-btn" type="button" onclick="Account.logout()">退出</button>
   </div>
 
@@ -730,7 +748,18 @@ canvas {
 <script src="sets.js"></script>
 <script src="affix_synergy.js"></script>
 <script src="quest.js"></script>
+<script src="archetype.js"></script>
 <script src="account.js"></script>
+<script src="attributes.js"></script>
+<script src="reincarnation.js"></script>
+<script src="rank.js"></script>
+<script src="guild.js"></script>
+<script src="body_part.js"></script>
+<script src="destructible.js"></script>
+<script src="mount.js"></script>
+<script src="gem_enchant.js"></script>
+<script src="refine.js"></script>
+<script src="core_system.js"></script>
 <script>
 // ============================================================
 //  传奇 · 装备词条 — H5 像素风战斗游戏
@@ -1182,6 +1211,26 @@ function calcPlayerStats(prof, level, equipment) {
   stats.lifesteal  = Math.min(1.0,  stats.lifesteal);
   stats.skillRange+= _eb.skillRange|| 0;
   stats.mpRegen    = (_eb.mpRegen  || 0);
+  // 流派觉醒加成（archetype.js）
+  if (typeof Archetype !== 'undefined' && window.playerArchetypeState) {
+    const archB = Archetype.getActiveBonuses(prof, window.playerArchetypeState);
+    if (archB.atkPct)   stats.atk   = Math.round(stats.atk * (1 + archB.atkPct));
+    if (archB.matkPct)  stats.matk  = Math.round(stats.matk * (1 + archB.matkPct));
+    if (archB.hpPct)    stats.hp    = Math.round(stats.hp * (1 + archB.hpPct));
+    if (archB.defPct)   stats.def   = Math.round(stats.def * (1 + archB.defPct));
+    if (archB.critRate) stats.critRate += archB.critRate;
+    if (archB.critDmg)  stats.critDmg  += archB.critDmg;
+    if (archB.dmgReduce)stats.dmgReduce += archB.dmgReduce;
+    if (archB.cdr)      stats.cdr      += archB.cdr;
+    if (archB.fireDmg)  stats.fireDmg  = (stats.fireDmg || 0) + archB.fireDmg;
+    if (archB.iceDmg)   stats.iceDmg   = (stats.iceDmg || 0) + archB.iceDmg;
+    // 流派终极技
+    const archUlt = Archetype.getUltimateSkill(prof, window.playerArchetypeState);
+    if (archUlt && archUlt.meta) {
+      // 重写终极技信息（流派终极技覆盖通用终极技）
+      window.archetypeUlt = archUlt;
+    }
+  }
   stats.skillMult  = (typeof skillMultMap !== 'undefined') ? skillMultMap : {};
   stats.maxHp = stats.hp;
   stats.maxMp = stats.mp;
@@ -2542,6 +2591,25 @@ class Entity {
       if (this.isPlayer) { screenShake = Math.max(screenShake, 16); hitStop = Math.max(hitStop, 0.07); }
       this.onDeath();
     }
+    // 部位破坏：Boss 受击时随机击中一个部位
+    if (this.bodyParts && typeof BodyPart !== 'undefined' && !this.isPlayer) {
+      const partNames = Object.keys(this.bodyParts);
+      const pick = partNames[Math.floor(Math.random() * partNames.length)];
+      const pr = BodyPart.hitPart(this.bodyParts, pick, Math.round(finalDmg * 0.3));
+      if (pr.destroyed) {
+        const name = BodyPart.PART_NAMES[pick] || pick;
+        addFloatText(this.x, this.y - this.size - 36, '💢 部位破坏: ' + name, '#f80');
+        screenShake = Math.max(screenShake, 12); hitStop = Math.max(hitStop, 0.08);
+        const reward = BodyPart.destroyReward(pick);
+        addFloatText(this.x, this.y - this.size - 56, '🎁 ' + reward, '#ffd700');
+        this.destroyedPartReward = (this.destroyedPartReward || 0) + 1;
+        // 部位破坏额外掉落
+        if (Math.random() < 0.4) {
+          const drop = generateEquipment(playerLevel, 1, 1);
+          if (drop) { drops.push({ x: this.x + rand(-30, 30), y: this.y + rand(-20, 20), item: drop, timer: 6 }); }
+        }
+      }
+    }
   }
   
   onDeath() {}
@@ -2886,6 +2954,9 @@ class Enemy extends Entity {
     this.bossCastPhase = null;
     this.interruptBonus = 0; // 打断成功→后续伤害+15%，存为 atk 倍率加成
     this.interruptFlash = 0; // 打断闪烁计时
+    // 部位破坏
+    this.bodyParts = null;
+    this.destroyedPartReward = 0;
     this.interruptLabel = null; // 打断动画浮字
     this.interruptLabelTimer = 0;
     // 战斗深化：每敌挂载 Combat.Fighter（弱点/韧性/元素附着）
@@ -3455,8 +3526,121 @@ function addKillMsg(msg) {
 window.ultBuff = window.ultBuff || { active: false, atkMult: 1, lifesteal: 0, until: 0, cdUntil: 0 };
 function ultAtkMult() { return (window.ultBuff && window.ultBuff.active) ? window.ultBuff.atkMult : 1; }
 function ultLifesteal() { return (window.ultBuff && window.ultBuff.active) ? window.ultBuff.lifesteal : 0; }
+// ── 流派觉醒面板 ──
+const ARCHETYPE_COLORS = { berserker:'#f44', guardian:'#48f', gladiator:'#fa0', pyromancer:'#f60', cryomancer:'#6cf', arcanist:'#c6f', necromancer:'#a7f', oracle:'#fd4', shaman:'#3c8' };
+function openArchetypePanel() {
+  if (typeof Archetype === 'undefined') return;
+  const el = document.getElementById('archetype-panel');
+  if (el) el.style.display = 'flex';
+  renderArchetypePanel();
+}
+function closeArchetypePanel() {
+  const el = document.getElementById('archetype-panel');
+  if (el) el.style.display = 'none';
+}
+function renderArchetypePanel() {
+  if (typeof Archetype === 'undefined') return;
+  const state = window.playerArchetypeState;
+  const prof = playerProfession;
+  const archList = Archetype.getArchetypes(prof);
+  const content = document.getElementById('archetype-content');
+  if (!content) return;
+  const reqEl = document.getElementById('arch-level-req');
+  if (reqEl) reqEl.textContent = 'Lv.' + playerLevel + (playerLevel < 30 ? ' (需30级)' : '');
+  // 显示/隐藏按钮
+  const btn = document.getElementById('btn-archetype');
+  if (btn) btn.style.display = playerLevel >= 30 ? 'inline-block' : 'none';
+  
+  if (!archList.length) { content.innerHTML = '<div style="color:#aaa;text-align:center;padding:20px">该职业暂无流派</div>'; return; }
+  
+  let html = '<div style="margin-bottom:12px;color:#aaa;font-size:12px">在等级30时选择一个流派，解锁觉醒技能树。每个职业3个流派，各有独特战斗风格。</div>';
+  for (const arch of archList) {
+    const isSelected = state && state.selected === arch.id;
+    const color = ARCHETYPE_COLORS[arch.id] || '#fff';
+    const canAwaken = Archetype.canAwaken(prof, arch.id, playerLevel, state || Archetype.makeArchetypeState());
+    const progress = state ? Archetype.archetypeProgress(prof, state) : 0;
+    
+    html += '<div class="arch-card" style="border:2px solid ' + (isSelected ? color : '#444') + ';border-radius:10px;padding:12px;margin-bottom:10px;background:rgba(0,0,0,0.3)">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+    html += '<span style="font-size:18px;font-weight:bold;color:' + color + '">' + arch.icon + ' ' + arch.name + '</span>';
+    if (isSelected) html += '<span style="color:#4c4;font-size:12px">✦ 已觉醒</span>';
+    else if (canAwaken) html += '<button class="arch-awaken-btn" data-arch="' + arch.id + '" style="background:' + color + ';border:none;border-radius:6px;padding:4px 12px;color:#fff;font-weight:bold;cursor:pointer">觉醒</button>';
+    else html += '<span style="color:#666;font-size:11px">' + (playerLevel < 30 ? '需 Lv.30' : '条件不足') + '</span>';
+    html += '</div>';
+    html += '<div style="color:#aaa;font-size:12px;margin:6px 0">' + arch.desc + '</div>';
+    
+    // 技能树
+    if (isSelected) {
+      html += '<div style="margin-top:8px;border-top:1px solid #333;padding-top:8px">';
+      html += '<div style="display:flex;justify-content:space-between;color:#aaa;font-size:11px;margin-bottom:6px">';
+      html += '<span>觉醒技能 (' + progress + '%)</span>';
+      html += '<span>觉醒点: ' + (state ? state.skillPoints : 0) + '</span>';
+      html += '</div>';
+      html += '<div class="arch-skills" style="display:flex;gap:6px;flex-wrap:wrap">';
+      for (const sk of arch.skillTree) {
+        const unlocked = state && state.unlockedSkills[sk.id];
+        const canLearn = Archetype.canLearnSkill(prof, arch.id, sk.id, state);
+        const cost = Archetype.skillCost(sk.tier);
+        html += '<div class="arch-skill" style="flex:1;min-width:100px;border:1px solid ' + (unlocked ? color : '#444') + ';border-radius:8px;padding:8px;text-align:center;background:' + (unlocked ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.3)') + '">';
+        html += '<div style="font-size:20px">' + (unlocked ? '✅' : '🔒') + '</div>';
+        html += '<div style="font-weight:bold;font-size:12px;color:' + (unlocked ? color : '#888') + '">T' + sk.tier + ' ' + sk.name + '</div>';
+        html += '<div style="font-size:10px;color:#aaa;margin:4px 0">' + sk.desc + '</div>';
+        if (!unlocked && canLearn) html += '<button class="arch-learn-btn" data-arch="' + arch.id + '" data-skill="' + sk.id + '" style="background:' + color + ';border:none;border-radius:4px;padding:2px 8px;color:#fff;font-size:11px;cursor:pointer">学习(' + cost + '点)</button>';
+        else if (!unlocked) html += '<div style="font-size:10px;color:#666">' + (state && state.skillPoints < cost ? '点数不足' : '需前置') + '</div>';
+        else html += '<div style="font-size:10px;color:#4a4">已掌握</div>';
+        html += '</div>';
+      }
+      html += '</div></div>';
+    }
+    html += '</div>';
+  }
+  content.innerHTML = html;
+  // 事件绑定
+  content.querySelectorAll('.arch-awaken-btn').forEach(function (btn) {
+    btn.onclick = function () {
+      const r = Archetype.awaken(prof, btn.dataset.arch, playerLevel, window.playerArchetypeState);
+      if (r.ok) {
+        addFloatText(player.x, player.y - 50, '🌟 流派觉醒: ' + archName(prof, btn.dataset.arch), '#ffd700');
+        playerStats = calcPlayerStats(playerProfession, playerLevel, Object.values(playerEquipment));
+        renderArchetypePanel();
+        if (typeof updateTopBarUI === 'function') updateTopBarUI();
+      }
+    };
+  });
+  content.querySelectorAll('.arch-learn-btn').forEach(function (btn) {
+    btn.onclick = function () {
+      if (Archetype.learnSkill(prof, btn.dataset.arch, btn.dataset.skill, window.playerArchetypeState)) {
+        addFloatText(player.x, player.y - 50, '🔓 习得觉醒技能!', '#6cf');
+        playerStats = calcPlayerStats(playerProfession, playerLevel, Object.values(playerEquipment));
+        renderArchetypePanel();
+        if (typeof updateTopBarUI === 'function') updateTopBarUI();
+      }
+    };
+  });
+}
+function archName(prof, id) {
+  const a = Archetype.getArchetype(prof, id);
+  return a ? a.name : id;
+}
+
 function useUltimate() {
   if (!player || player.state === 'dead') return;
+  // 流派觉醒终极技优先
+  if (window.archetypeUlt) {
+    const au = window.archetypeUlt;
+    const now = Date.now();
+    if ((window.ultBuff && window.ultBuff.cdUntil || 0) > now) { addFloatText(player.x, player.y - 40, '终极技冷却中', '#aaa'); return; }
+    addFloatText(player.x, player.y - 50, '⚡ ' + au.name + '!', '#ffd700');
+    Sound.cast('berserk');
+    window.ultBuff = {
+      active: true, atkMult: 2.0, lifesteal: 0.20,
+      until: now + (au.meta ? au.meta.duration : 10) * 1000,
+      cdUntil: now + (au.meta ? au.meta.cd : 120) * 1000,
+    };
+    setTimeout(function () { if (window.ultBuff) window.ultBuff.active = false; }, (au.meta ? au.meta.duration : 10) * 1000);
+    screenShake = Math.max(screenShake, 16); hitStop = Math.max(hitStop, 0.08);
+    return;
+  }
   const info = window.ultimateInfo;
   if (!info) { addFloatText(player.x, player.y - 40, '未解锁终极技能', '#aaa'); return; }
   const now = Date.now();
@@ -4160,6 +4344,11 @@ function spawnMapBoss() {
     player.y + Math.sin(angle) * 280
   );
   enemies.push(boss);
+  // 部位破坏初始化
+  if (typeof BodyPart !== 'undefined') {
+    boss.bodyParts = BodyPart.makeParts(boss.maxHp);
+    boss.destroyedPartReward = 0;
+  }
   Sound.bossAppear();
   addKillMsg(`⚠️ ${def.name} 出现了！`);
 }
@@ -4714,6 +4903,22 @@ function envObjectsOnMap() { return envObjects; }
 function initEnvObjects() {
   envObjects = (typeof Env !== 'undefined') ? Env.makeObjects(currentMapIndex) : [];
 }
+// ── 可破坏物（场景收集品）──
+let destructibles = [];
+function initDestructibles() {
+  destructibles = [];
+  if (typeof Destructible === 'undefined') return;
+  const DEST_TYPES = ['crate','vase','mushroom','ore','herb'];
+  const count = 4 + currentMapIndex % 3; // 每图4-6个
+  for (let i = 0; i < count; i++) {
+    const type = DEST_TYPES[Math.floor(Math.random() * DEST_TYPES.length)];
+    const x = rand(100, CFG.MAP_W - 100);
+    const y = rand(100, CFG.MAP_H - 100);
+    // 避开障碍物和玩家出生点
+    if (isSolidAt(x, y, 30) || dist(x, y, 1200, 800) < 300) continue;
+    destructibles.push(Destructible.makeDestructible(type, x, y));
+  }
+}
 // 全服均价（动态物价缩放用）：单机原型固定为 10 → priceMult=1；多人环境由服务端下发
 let SERVER_AVG_LEVEL = 10;
 
@@ -4800,6 +5005,67 @@ function drawEnvObjects(ctx, camX, camY) {
       ctx.moveTo(sx, sy - o.r * 1.7); ctx.lineTo(sx - o.r, sy + o.r); ctx.lineTo(sx + o.r, sy + o.r);
       ctx.closePath(); ctx.fill();
       ctx.strokeStyle = '#eef'; ctx.lineWidth = 2; ctx.stroke();
+    }
+  }
+  // ── 可破坏物绘制 ──
+  if (typeof Destructible !== 'undefined') {
+    const now = Date.now() / 1000;
+    for (const d of destructibles) {
+      if (d.state === 'destroyed') continue;
+      const sx = d.x - camX, sy = d.y - camY;
+      if (sx < -40 || sx > gameWidth + 40 || sy < -60 || sy > gameHeight + 60) continue;
+      // 影子
+      ctx.globalAlpha = 0.25; ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.ellipse(sx, sy + 6, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      const hpPct = d.hp / d.maxHp;
+      switch (d.type) {
+        case 'crate':
+          ctx.fillStyle = '#8B5E3C'; ctx.fillRect(sx - 12, sy - 12, 24, 24);
+          ctx.strokeStyle = '#5C3A1E'; ctx.lineWidth = 2; ctx.strokeRect(sx - 12, sy - 12, 24, 24);
+          ctx.fillStyle = '#C49A6C'; ctx.fillRect(sx - 10, sy - 8, 8, 4);
+          ctx.fillRect(sx - 10, sy + 2, 8, 4);
+          break;
+        case 'vase':
+          ctx.fillStyle = '#5B7BA0'; ctx.beginPath();
+          ctx.moveTo(sx, sy - 16); ctx.lineTo(sx - 12, sy + 14); ctx.lineTo(sx + 12, sy + 14);
+          ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = '#3A5A7A'; ctx.lineWidth = 1.5; ctx.stroke();
+          break;
+        case 'mushroom':
+          ctx.fillStyle = '#D4A574'; ctx.fillRect(sx - 3, sy - 4, 6, 14);
+          ctx.fillStyle = '#E84040'; ctx.beginPath(); ctx.arc(sx, sy - 8, 10, Math.PI, 0); ctx.fill();
+          ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(sx - 4, sy - 9, 2, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(sx + 4, sy - 6, 2, 0, Math.PI * 2); ctx.fill();
+          break;
+        case 'ore':
+          ctx.fillStyle = '#6A6A7A'; ctx.beginPath();
+          ctx.moveTo(sx, sy - 14); ctx.lineTo(sx - 14, sy + 2); ctx.lineTo(sx - 8, sy + 14);
+          ctx.lineTo(sx + 8, sy + 14); ctx.lineTo(sx + 14, sy + 2); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#F5C842'; ctx.beginPath(); ctx.arc(sx - 2, sy, 4, 0, Math.PI * 2); ctx.fill();
+          break;
+        case 'herb':
+          ctx.fillStyle = '#4A8'; for (let i = -1; i <= 1; i++) {
+            ctx.fillRect(sx + i * 8 - 1.5, sy - 8, 3, 16);
+          }
+          ctx.fillStyle = '#3C7'; ctx.beginPath(); ctx.arc(sx, sy - 10, 8, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#FFF'; ctx.globalAlpha = 0.5;
+          ctx.beginPath(); ctx.arc(sx - 2, sy - 11, 2, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 1;
+          break;
+      }
+      // 名标
+      if (typeof Destructible.DEST_NAMES !== 'undefined') {
+        ctx.font = '9px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ddd';
+        ctx.fillText(Destructible.DEST_NAMES[d.type] || d.type, sx, sy + 24);
+      }
+      // 受损状态视觉
+      if (hpPct < 0.5) {
+        ctx.globalAlpha = 0.4 + 0.3 * Math.sin(now * 6);
+        ctx.strokeStyle = '#f44'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(sx, sy, 16, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
     }
   }
 }
@@ -5151,6 +5417,7 @@ function update(dt) {
       enemies = []; bossShots = []; particles = []; floatTexts = []; drops = [];
       buildTerrain(currentMapIndex);
       initEnvObjects();
+      initDestructibles();
       player.x = CFG.MAP_W / 2; player.y = CFG.MAP_H / 2; player.vx = 0; player.vy = 0;
       for (let i = 0; i < 6; i++) spawnEnemy();
       screenShake = Math.max(screenShake, 8);
@@ -5201,6 +5468,15 @@ function update(dt) {
 
     // 大气粒子漂移
     updateAmbient(dt);
+
+    // 可破坏物重生
+    if (typeof Destructible !== 'undefined' && destructibles.length) {
+      for (const d of destructibles) {
+        if (Destructible.tickRespawn(d, dt)) {
+          addFloatText(d.x, d.y - 20, '🔄 已刷新', '#8f8');
+        }
+      }
+    }
 
     // 熔岩危险区伤害（仅火山图）
     if (HAZARDS.length) {
@@ -5430,6 +5706,53 @@ function drawCombatHUD(ctx) {
     ctx.fillText('⚡ 终结技就绪！按 F 释放', cx, y + 22);
   }
   ctx.restore();
+  // ── Boss 部位破坏 HUD ──
+  if (typeof BodyPart !== 'undefined') {
+    for (const e of enemies) {
+      if (e.state === 'dead' || !e.isBoss || !e.bodyParts) continue;
+      const parts = e.bodyParts;
+      const bx = 12, by = 100;
+      ctx.save();
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillStyle = '#fca';
+      ctx.textAlign = 'left';
+      ctx.fillText('部位破坏', bx, by);
+      const partKeys = Object.keys(parts);
+      const boxSize = 50;
+      ctx.font = '10px sans-serif';
+      for (let i = 0; i < partKeys.length; i++) {
+        const pk = partKeys[i];
+        const p = parts[pk];
+        const px = bx + i * (boxSize + 6);
+        const py = by + 8;
+        const hpPct = p.destroyed ? 0 : p.hp / p.maxHp;
+        ctx.fillStyle = '#222';
+        ctx.fillRect(px, py, boxSize, boxSize);
+        // 血条
+        const barH = 6;
+        ctx.fillStyle = '#400';
+        ctx.fillRect(px + 2, py + boxSize - barH - 2, boxSize - 4, barH);
+        ctx.fillStyle = p.destroyed ? '#666' : (hpPct > 0.5 ? '#4c4' : '#f44');
+        ctx.fillRect(px + 2, py + boxSize - barH - 2, (boxSize - 4) * (p.destroyed ? 0 : hpPct), barH);
+        // 部位名
+        ctx.fillStyle = p.destroyed ? '#666' : '#fff';
+        ctx.textAlign = 'center';
+        ctx.fillText(BodyPart.PART_NAMES[pk] || pk, px + boxSize / 2, py + 14);
+        // 状态图标
+        if (p.destroyed) {
+          ctx.fillStyle = '#f44';
+          ctx.fillText('✕', px + boxSize / 2, py + 32);
+        } else if (hpPct < 0.3) {
+          ctx.fillStyle = '#f80';
+          ctx.fillText('⚠', px + boxSize / 2, py + 32);
+        } else {
+          ctx.fillStyle = '#4a4';
+          ctx.fillText('✓', px + boxSize / 2, py + 32);
+        }
+      }
+      ctx.restore();
+    }
+  }
 }
 
 // 终结技：消耗全部连击，造成爆发伤害（连击数 × k 倍基础攻击）
@@ -5724,6 +6047,25 @@ function setupInput() {
       if (nearest) {
         targetEnemy = nearest;
         player.doAttack(nearest);
+      } else if (typeof Destructible !== 'undefined' && destructibles.length) {
+        // 点击可破坏物
+        for (const d of destructibles) {
+          if (d.state === 'destroyed') continue;
+          if (dist(worldX, worldY, d.x, d.y) < 30) {
+            const r = Destructible.hitDestructible(d, playerStats.atk);
+            if (r.destroyed) {
+              screenShake = Math.max(screenShake, 4);
+              const drops = Destructible.getDrop(d);
+              if (drops) {
+                if (drops.gold) { playerGold += drops.gold; addKillMsg('💰 +' + drops.gold + '金'); }
+                if (drops.item) { addKillMsg('📦 获得 ' + drops.item); }
+                if (drops.heal) { player.hp = Math.min(player.maxHp, player.hp + drops.heal); }
+              }
+              addFloatText(d.x, d.y - 20, '💥 破坏!', '#f80');
+            }
+            break;
+          }
+        }
       }
     }
   });
@@ -5738,6 +6080,10 @@ function setupInput() {
 // ==================== 初始化 ====================
 function selectProfession(prof) {
   playerProfession = prof;
+  // 流派觉醒状态
+  if (typeof Archetype !== 'undefined') {
+    window.playerArchetypeState = Archetype.makeArchetypeState();
+  }
   
   document.getElementById('profession-select').style.display = 'none';
   document.getElementById('ui-layer').style.display = 'block';
