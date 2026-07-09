@@ -545,11 +545,91 @@ canvas {
       .bp-btn { flex:1; padding:6px 4px; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; font-family:inherit; transition:filter .15s, transform .1s; }
       .bp-btn:hover { filter:brightness(1.12); }
       .bp-equip { background:linear-gradient(180deg,#ffce4a,#e0a010); color:#2a1a00; }
+      .bp-enhance { background:linear-gradient(180deg,#6c4aaa,#4a2a8a); color:#ddd; }
+      .bp-reforge { background:linear-gradient(180deg,#4a8acc,#2a6aaa); color:#ddd; }
       /* 流派觉醒 */
       .arch-card{transition:border-color .2s}
       .arch-awaken-btn:hover,.arch-learn-btn:hover{filter:brightness(1.15)}
       .arch-skill{transition:all .2s}
       .arch-skill:hover{border-color:#ffd700!important}
+      /* 属性分配 */
+      .attr-row{display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,0.06)}
+      .attr-name{width:60px;font-weight:bold;color:#ffd700;font-size:13px}
+      .attr-val{width:40px;text-align:center;font-size:15px;color:#fff;font-weight:bold}
+      .attr-btn{width:30px;height:30px;border:1px solid #4a3a6a;border-radius:6px;background:#2a2038;color:#fff;font-size:16px;cursor:pointer;text-align:center;line-height:28px}
+      .attr-btn:hover{background:#3a2a48;border-color:#ffd700}
+      .attr-btn:disabled{opacity:0.3;cursor:default}
+      .attr-bonus{font-size:11px;color:#9a94ad;margin:8px 0 4px;line-height:1.7}
+      .attr-reset{display:block;margin:10px auto 0;padding:6px 18px;border:1px solid #a44;border-radius:6px;background:#3a1a1a;color:#f88;font-size:12px;cursor:pointer}
+      /* 转生 */
+      .reinc-card{border:1px solid rgba(255,215,0,0.3);border-radius:10px;padding:14px;margin-bottom:10px;text-align:center}
+      .reinc-title{font-size:22px;font-weight:bold;color:#ffd700;margin:4px 0}
+      .reinc-req{font-size:12px;color:#aaa;margin:6px 0}
+      .reinc-progress{height:8px;border-radius:4px;background:#222;margin:8px 0;overflow:hidden}
+      .reinc-progress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#ffd700,#ff8c00);transition:width .3s}
+      .reinc-btn{display:block;margin:12px auto;padding:10px 30px;border:none;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer}
+      .reinc-btn.can{background:linear-gradient(180deg,#ffd700,#c8a000);color:#2a1a00}
+      .reinc-btn.cant{background:#333;color:#888;cursor:default}
+      .reinc-bonus{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
+      .reinc-bonus-item{background:rgba(255,255,255,0.04);border-radius:6px;padding:8px;text-align:center}
+      .reinc-bonus-item .label{font-size:11px;color:#aaa}
+      .reinc-bonus-item .value{font-size:16px;font-weight:bold;color:#4c4}
+      /* 排行榜 */
+      .rank-tab{padding:5px 12px;border:1px solid #4a3a6a;border-radius:6px;background:#2a2038;color:#ccc;font-size:12px;cursor:pointer}
+      .rank-tab.active{border-color:#ffd700;color:#ffd700;background:rgba(255,215,0,0.1)}
+      .rank-entry{display:flex;align-items:center;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px}
+      .rank-num{width:30px;text-align:center;font-weight:bold}
+      .rank-name{flex:1;padding:0 8px}
+      .rank-val{text-align:right;color:#ddd;font-weight:bold;min-width:80px}
+      .rank-extra{text-align:right;color:#999;font-size:11px;min-width:60px}
+      .rank-gold{color:#ffd700}.rank-silver{color:#ccc}.rank-bronze{color:#c88}
+      .rank-highlight{background:rgba(255,215,0,0.06);border-left:3px solid #ffd700}
+      /* 公会 */
+      .guild-card{border:1px solid rgba(255,215,0,0.25);border-radius:10px;padding:14px;margin-bottom:10px}
+      .guild-name{font-size:18px;font-weight:bold;color:#ffd700}
+      .guild-stat{display:flex;justify-content:space-between;font-size:12px;color:#aaa;margin:4px 0}
+      .guild-member{display:flex;justify-content:space-between;padding:4px 6px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:#cde}
+      .guild-btn{padding:5px 14px;border:1px solid #4a3a6a;border-radius:6px;background:#2a2038;color:#eee;font-size:12px;cursor:pointer;margin:3px}
+      .guild-btn:hover{border-color:#ffd700}
+      .guild-input{width:100%;padding:8px;border:1px solid #555;border-radius:6px;background:#1a1628;color:#fff;font-size:13px;margin:6px 0;box-sizing:border-box}
+      /* 坐骑 */
+      .mount-tab{padding:5px 12px;border:1px solid #4a3a6a;border-radius:6px;background:#2a2038;color:#ccc;font-size:12px;cursor:pointer}
+      .mount-tab.active{border-color:#ffd700;color:#ffd700;background:rgba(255,215,0,0.1)}
+      .mount-card{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid rgba(255,255,255,0.06);border-radius:10px;margin-bottom:8px}
+      .mount-icon{font-size:28px;width:40px;text-align:center}
+      .mount-info{flex:1}
+      .mount-info .name{font-size:14px;font-weight:bold;color:#fff}
+      .mount-info .stat{font-size:11px;color:#aaa}
+      .mount-info .rarity{font-size:10px}
+      .mount-btn{padding:4px 12px;border:1px solid #4a3a6a;border-radius:6px;background:#2a2038;color:#eee;font-size:11px;cursor:pointer}
+      .mount-btn.active{border-color:#4c4;color:#4c4}
+      .mount-btn.owned{background:rgba(68,204,68,0.1);border-color:#4c4;color:#4c4}
+      .mount-swatch{display:inline-block;width:20px;height:20px;border-radius:50%;vertical-align:middle;margin-right:6px;border:1px solid rgba(255,255,255,0.2)}
+      /* 镶嵌 */
+      .gem-slot{display:inline-flex;flex-direction:column;align-items:center;width:70px;margin:6px;padding:8px;border:2px dashed #555;border-radius:10px}
+      .gem-slot.filled{border-style:solid;border-color:var(--gem-color,#6cf)}
+      .gem-slot .gem-icon{font-size:24px}
+      .gem-select{width:100%;padding:3px;border:1px solid #555;border-radius:4px;background:#1a1628;color:#fff;font-size:11px;margin-top:4px}
+      .gem-section{border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px;margin-bottom:10px}
+      .gem-section .sec-title{font-size:13px;font-weight:bold;color:#ffd700;margin-bottom:8px}
+      .ench-entry{padding:6px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:#cde}
+      /* 洗练 */
+      .refine-cat{padding:4px 10px;border:1px solid #4a3a6a;border-radius:6px;background:#2a2038;color:#ccc;font-size:11px;cursor:pointer}
+      .refine-cat.active{border-color:#ffd700;color:#ffd700;background:rgba(255,215,0,0.1)}
+      .refine-affix{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px}
+      .refine-lock{width:24px;height:24px;border:1px solid #555;border-radius:4px;background:transparent;color:#888;cursor:pointer;font-size:11px}
+      .refine-lock.locked{border-color:#ff8;color:#ff8;background:rgba(255,200,0,0.1)}
+      .refine-result{background:rgba(255,255,255,0.04);border-radius:6px;padding:8px;margin:8px 0;text-align:center;font-size:12px;color:#4c4}
+      /* 四象核心 */
+      .core-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+      .core-slot{aspect-ratio:1;border:2px dashed #555;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;text-align:center;cursor:pointer;position:relative;min-height:90px}
+      .core-slot.filled{border-style:solid}
+      .core-slot .core-name{font-weight:bold;font-size:14px}
+      .core-slot .core-rank{font-size:11px;color:#aaa}
+      .core-slot .core-bonus{font-size:10px;color:#9a94ad;margin-top:4px}
+      .core-set{text-align:center;padding:8px;border-radius:8px;font-size:12px;margin-top:8px}
+      .core-inv{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+      .core-inv-item{padding:5px 10px;border:1px solid #555;border-radius:6px;font-size:11px;cursor:pointer}
       .bp-sell { background:linear-gradient(180deg,#4caf50,#2e7d32); color:#fff; }
       .bp-discard { background:linear-gradient(180deg,#555,#333); color:#ddd; }
       .bp-enhance { background:linear-gradient(180deg,#9a6bff,#6a3fd0); color:#fff; }
@@ -728,12 +808,84 @@ canvas {
     </div>
   </div>
 
+  <!-- ===== 属性分配 ===== -->
+  <div id="attr-panel" style="display:none;">
+    <div class="modal-box" style="width:min(420px,92vw)">
+      <div class="modal-head"><span class="modal-title">属性分配</span><span id="attr-points" class="sp-badge">可用点数: 0</span><button class="modal-close" type="button" onclick="closeAttrPanel()">✕</button></div>
+      <div id="attr-content" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ===== 转生 ===== -->
+  <div id="reinc-panel" style="display:none;">
+    <div class="modal-box" style="width:min(460px,92vw)">
+      <div class="modal-head"><span class="modal-title">转生</span><span id="reinc-title" class="sp-badge"></span><button class="modal-close" type="button" onclick="closeReincPanel()">✕</button></div>
+      <div id="reinc-content" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ===== 排行榜 ===== -->
+  <div id="rank-panel" style="display:none;">
+    <div class="modal-box" style="width:min(560px,92vw)">
+      <div class="modal-head"><span class="modal-title">排行榜</span><button class="modal-close" type="button" onclick="closeRankPanel()">✕</button></div>
+      <div id="rank-tabs" style="display:flex;gap:6px;padding:0 16px;margin-bottom:8px"></div>
+      <div id="rank-content" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ===== 公会 ===== -->
+  <div id="guild-panel" style="display:none;">
+    <div class="modal-box" style="width:min(540px,92vw)">
+      <div class="modal-head"><span class="modal-title">公会</span><button class="modal-close" type="button" onclick="closeGuildPanel()">✕</button></div>
+      <div id="guild-content" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ===== 外观坐骑 ===== -->
+  <div id="mount-panel" style="display:none;">
+    <div class="modal-box" style="width:min(580px,92vw)">
+      <div class="modal-head"><span class="modal-title">坐骑 · 外观</span><button class="modal-close" type="button" onclick="closeMountPanel()">✕</button></div>
+      <div id="mount-tabs" style="display:flex;gap:6px;padding:0 16px;margin-bottom:8px"></div>
+      <div id="mount-content" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ===== 镶嵌附魔 ===== -->
+  <div id="gem-panel" style="display:none;">
+    <div class="modal-box" style="width:min(500px,92vw)">
+      <div class="modal-head"><span class="modal-title">镶嵌 · 附魔</span><span id="gem-equip-name" class="sp-badge" style="font-size:11px"></span><button class="modal-close" type="button" onclick="closeGemPanel()">✕</button></div>
+      <div id="gem-content" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ===== 洗练 ===== -->
+  <div id="refine-panel" style="display:none;">
+    <div class="modal-box" style="width:min(540px,92vw)">
+      <div class="modal-head"><span class="modal-title">洗练</span><span id="refine-equip-name" class="sp-badge" style="font-size:11px"></span><button class="modal-close" type="button" onclick="closeRefinePanel()">✕</button></div>
+      <div id="refine-content" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ===== 四象核心 ===== -->
+  <div id="core-panel" style="display:none;">
+    <div class="modal-box" style="width:min(580px,92vw)">
+      <div class="modal-head"><span class="modal-title">四象核心</span><button class="modal-close" type="button" onclick="closeCorePanel()">✕</button></div>
+      <div id="core-content" class="modal-body"></div>
+    </div>
+  </div>
+
   <!-- ===== 游戏内账号菜单 ===== -->
   <div id="account-menu" style="display:none;">
     <span id="acc-username" class="acc-user"></span>
     <button class="am-btn" type="button" onclick="Account.openSkill()">技能</button>
     <button class="am-btn" type="button" onclick="Account.openAdv()">进阶</button>
     <button id="btn-archetype" class="am-btn" type="button" onclick="openArchetypePanel()" style="display:none">流派</button>
+    <button id="btn-attr" class="am-btn" type="button" onclick="openAttrPanel()">属性</button>
+    <button id="btn-reinc" class="am-btn" type="button" onclick="openReincPanel()" style="display:none">转生</button>
+    <button id="btn-rank" class="am-btn" type="button" onclick="openRankPanel()">排行</button>
+    <button id="btn-guild" class="am-btn" type="button" onclick="openGuildPanel()">公会</button>
+    <button id="btn-mount" class="am-btn" type="button" onclick="openMountPanel()">坐骑</button>
+    <button id="btn-core" class="am-btn" type="button" onclick="openCorePanel()">核心</button>
     <button class="am-btn" type="button" onclick="Account.logout()">退出</button>
   </div>
 
@@ -3056,6 +3208,7 @@ class Enemy extends Entity {
   
   onDeath() {
     stats_totalKills++;
+    if (window.playerReincState) window.playerReincState.totalKills = (window.playerReincState.totalKills || 0) + 1;
     if (typeof Quest !== 'undefined') Quest.onKill(this.defData.id, this.isBoss);
     if (typeof Daily !== 'undefined') Daily.onKill(this.defData.id, this.isElite, this.isBoss);
     if (typeof Weekly !== 'undefined') Weekly.onKill(this.defData.id, this.isElite, this.isBoss);
@@ -3621,6 +3774,581 @@ function renderArchetypePanel() {
 function archName(prof, id) {
   const a = Archetype.getArchetype(prof, id);
   return a ? a.name : id;
+}
+
+// ── 属性分配面板 ──
+function openAttrPanel() {
+  document.getElementById('attr-panel').style.display = 'flex';
+  renderAttrPanel();
+}
+function closeAttrPanel() {
+  document.getElementById('attr-panel').style.display = 'none';
+}
+function renderAttrPanel() {
+  if (typeof Attributes === 'undefined') return;
+  if (!window.playerAttribs) window.playerAttribs = Attributes.makeAttribs();
+  const a = window.playerAttribs;
+  const attrNames = {str:'力量',int:'智力',agi:'敏捷',vit:'体质',spi:'精神'};
+  const colors = {str:'#f66',int:'#66f',agi:'#6f6',vit:'#fc4',spi:'#c6f'};
+  document.getElementById('attr-points').textContent = '可用点数: ' + a.points;
+  let html = '<div class="attr-bonus">每点: STR=2攻击 | INT=2魔攻 | AGI=1%暴击 | VIT=10生命+1防御 | SPI=10法力+1魔防</div>';
+  for (const k of ['str','int','agi','vit','spi']) {
+    html += '<div class="attr-row">';
+    html += '<span class="attr-name" style="color:' + colors[k] + '">' + attrNames[k] + '</span>';
+    html += '<span class="attr-val">' + (a[k] || 0) + '</span>';
+    html += '<button class="attr-btn" onclick="doAlloc(\'' + k + '\')"' + (Attributes.canAllocate(a, k) ? '' : ' disabled') + '>+</button>';
+    html += '</div>';
+  }
+  const bonus = Attributes.calcAttribBonuses(a, playerProfession);
+  html += '<div class="attr-bonus">加成预览: 攻击+' + (bonus.atk || 0) + ' 魔攻+' + (bonus.matk || 0) + ' 防御+' + (bonus.def || 0) + ' 魔防+' + (bonus.mdef || 0) + '<br>生命+' + (bonus.maxHp || 0) + ' 法力+' + (bonus.maxMp || 0) + ' 暴击+' + Math.round((bonus.critRate || 0) * 100) + '%</div>';
+  const rc = window.__attrResetCount || 0;
+  html += '<button class="attr-reset" onclick="doResetAttr()">重置属性 (耗 ' + Attributes.resetCost(rc) + ' 金)</button>';
+  document.getElementById('attr-content').innerHTML = html;
+}
+function doAlloc(k) {
+  if (!window.playerAttribs) window.playerAttribs = Attributes.makeAttribs();
+  if (Attributes.allocate(window.playerAttribs, k)) {
+    playerStats = calcPlayerStats(playerProfession, playerLevel, Object.values(playerEquipment));
+    player.maxHp = playerStats.maxHp; player.mp = playerStats.maxMp;
+    renderAttrPanel(); if (typeof updateTopBarUI === 'function') updateTopBarUI();
+  }
+}
+function doResetAttr() {
+  if (!window.playerAttribs) return;
+  const rc = window.__attrResetCount || 0;
+  const cost = Attributes.resetCost(rc);
+  if (playerGold < cost) { addFloatText(player.x, player.y - 40, '金币不足!', '#f88'); return; }
+  playerGold -= cost;
+  const refunded = Attributes.resetAttribs(window.playerAttribs);
+  window.__attrResetCount = (window.__attrResetCount || 0) + 1;
+  saveGame();
+  addFloatText(player.x, player.y - 50, '🔄 属性已重置', '#ffd700');
+  playerStats = calcPlayerStats(playerProfession, playerLevel, Object.values(playerEquipment));
+  renderAttrPanel(); if (typeof updateTopBarUI === 'function') updateTopBarUI();
+}
+
+// ── 转生面板 ──
+function openReincPanel() {
+  document.getElementById('reinc-panel').style.display = 'flex';
+  renderReincPanel();
+}
+function closeReincPanel() {
+  document.getElementById('reinc-panel').style.display = 'none';
+}
+function renderReincPanel() {
+  if (typeof Reincarnation === 'undefined') return;
+  if (!window.playerReincState) window.playerReincState = Reincarnation.makeReincarnation();
+  const s = window.playerReincState;
+  const title = Reincarnation.formatReincarnation(s.reincLevel) || '未转生';
+  document.getElementById('reinc-title').textContent = title;
+  const bonus = Reincarnation.reincarnationBonuses(s.reincLevel);
+  let html = '<div class="reinc-card">';
+  html += '<div class="reinc-title">' + title + '</div>';
+  html += '<div class="reinc-req">当前转生: ' + s.reincLevel + '/' + Reincarnation.MAX_REINCARNATION + '</div>';
+  html += '<div class="reinc-bonus">';
+  for (const [k, v] of Object.entries(bonus)) {
+    if (v > 0) html += '<div class="reinc-bonus-item"><div class="label">' + ({atkPct:'攻击',matkPct:'魔攻',hpPct:'生命',critRate:'暴击',goldBonus:'金币'}[k] || k) + '</div><div class="value">+' + (k === 'critRate' ? Math.round(v * 100) + '%' : k === 'goldBonus' ? v : Math.round(v * 100) + '%') + '</div></div>';
+  }
+  html += '</div>';
+  if (s.reincLevel < Reincarnation.MAX_REINCARNATION) {
+    const can = Reincarnation.canReincarnate(playerLevel, s.reincLevel, { kills: s.totalKills || 0 });
+    html += '<div style="font-size:12px;color:#aaa;text-align:left">条件:</div>';
+    html += '<div style="font-size:11px;color:' + (playerLevel >= 50 ? '#4c4' : '#f44') + '">' + (playerLevel >= 50 ? '✓' : '✗') + ' 等级 ≥ 50 (当前 ' + playerLevel + ')</div>';
+    html += '<div style="font-size:11px;color:' + ((s.totalKills || 0) >= 1000 ? '#4c4' : '#f44') + '">' + ((s.totalKills || 0) >= 1000 ? '✓' : '✗') + ' 击杀 ≥ 1000 (当前 ' + (s.totalKills || 0) + ')</div>';
+    html += '<div class="reinc-progress"><div class="reinc-progress-fill" style="width:' + Math.min(100, playerLevel / 50 * 100) + '%"></div></div>';
+    html += '<div style="font-size:10px;color:#666;text-align:center">等级进度 ' + Math.round(playerLevel / 50 * 100) + '%</div>';
+    if (can) html += '<button class="reinc-btn can" onclick="doReincarnate()">✨ 转生</button>';
+    else html += '<div class="reinc-btn cant">条件不足</div>';
+  } else {
+    html += '<div style="color:#ffd700;font-size:16px;font-weight:bold;margin-top:10px">✦ 已达九转巅峰 ✦</div>';
+  }
+  html += '</div>';
+  document.getElementById('reinc-content').innerHTML = html;
+}
+function doReincarnate() {
+  if (typeof Reincarnation === 'undefined') return;
+  const s = window.playerReincState;
+  const r = Reincarnation.performReincarnation(s);
+  if (r) {
+    playerLevel = 1; playerExp = 0; playerExpToNext = window.BAL ? window.BAL.EXP_BASE : 100;
+    addFloatText(player.x, player.y - 50, '🌟 转生成功！' + Reincarnation.formatReincarnation(s.reincLevel), '#ffd700');
+    screenShake = 20; hitStop = 0.1;
+    playerStats = calcPlayerStats(playerProfession, playerLevel, Object.values(playerEquipment));
+    saveGame(); renderReincPanel(); if (typeof updateTopBarUI === 'function') updateTopBarUI();
+  }
+}
+
+// ── 排行榜面板 ──
+const RANK_TYPES = ['level','power','bossKills','guild','reincarnation'];
+const RANK_LABELS = {level:'等级',power:'战力',bossKills:'Boss击杀',guild:'公会',reincarnation:'转生'};
+let _rankTab = 'level';
+function openRankPanel() {
+  document.getElementById('rank-panel').style.display = 'flex';
+  renderRankTabs();
+  renderRankPanel(_rankTab);
+}
+function closeRankPanel() {
+  document.getElementById('rank-panel').style.display = 'none';
+}
+function renderRankTabs() {
+  if (typeof Rank === 'undefined') return;
+  let html = '';
+  for (const t of RANK_TYPES) {
+    html += '<div class="rank-tab' + (t === _rankTab ? ' active' : '') + '" onclick="switchRankTab(\'' + t + '\')">' + (RANK_LABELS[t] || t) + '</div>';
+  }
+  document.getElementById('rank-tabs').innerHTML = html;
+}
+function switchRankTab(t) { _rankTab = t; renderRankTabs(); renderRankPanel(t); }
+function renderRankPanel(type) {
+  if (typeof Rank === 'undefined') return;
+  const rankings = Rank.makeRankings();
+  const list = rankings[type] || [];
+  let html = '';
+  for (let i = 0; i < list.length; i++) {
+    const e = list[i];
+    const color = i === 0 ? 'rank-gold' : (i === 1 ? 'rank-silver' : (i === 2 ? 'rank-bronze' : ''));
+    const isMe = e.name === '你' || (e.name || '').includes('我') || i === list.length - 1;
+    html += '<div class="rank-entry' + (isMe ? ' rank-highlight' : '') + '" style="color:#' + (i < 3 ? ['ffd700','ccc','c88'][i] : 'fff') + '">';
+    html += '<div class="rank-num">' + (e.rank <= 3 ? ['🥇','🥈','🥉'][e.rank - 1] : '#' + e.rank) + '</div>';
+    html += '<div class="rank-name">' + (e.name || '玩家' + (i + 1)) + '</div>';
+    html += '<div class="rank-val">' + Rank.formatRankValue(type, e.value) + '</div>';
+    html += '<div class="rank-extra">' + (e.extra || '') + '</div>';
+    html += '</div>';
+  }
+  if (!list.length) html += '<div style="text-align:center;padding:20px;color:#aaa">暂无排名数据</div>';
+  html += '<div style="text-align:center;margin-top:10px"><button class="guild-btn" onclick="renderRankPanel(\'' + type + '\')">🔄 刷新</button></div>';
+  document.getElementById('rank-content').innerHTML = html;
+}
+
+// ── 公会面板 ──
+function openGuildPanel() {
+  document.getElementById('guild-panel').style.display = 'flex';
+  renderGuildPanel();
+}
+function closeGuildPanel() {
+  document.getElementById('guild-panel').style.display = 'none';
+}
+function renderGuildPanel() {
+  if (typeof Guild === 'undefined') return;
+  const guild = window.playerGuild;
+  const content = document.getElementById('guild-content');
+  if (!content) return;
+  if (!guild) {
+    // 无公会：显示创建表单
+    const mockGuilds = Guild.makeMockGuilds();
+    let html = '<div style="margin-bottom:10px;color:#aaa;font-size:12px">加入或创建一个公会，与伙伴并肩作战</div>';
+    html += '<div style="font-weight:bold;color:#ffd700;font-size:13px;margin-bottom:6px">已有公会</div>';
+    for (const g of mockGuilds) {
+      const lv = Guild.guildLevel(g);
+      html += '<div class="guild-card" style="display:flex;justify-content:space-between;align-items:center">';
+      html += '<div><span class="guild-name">' + g.name + '</span><span style="color:#aaa;font-size:11px;margin-left:8px">Lv.' + lv + ' · ' + g.members.length + '人</span></div>';
+      html += '<button class="guild-btn" onclick="doJoinGuild(\'' + g.name + '\')">加入</button></div>';
+    }
+    html += '<div style="border-top:1px solid #333;margin-top:12px;padding-top:12px">';
+    html += '<div style="font-weight:bold;color:#ffd700;font-size:13px;margin-bottom:4px">创建公会 (需 ' + Guild.CREATE_COST + ' 金)</div>';
+    html += '<input class="guild-input" id="guild-create-name" placeholder="输入公会名称..." maxlength="12">';
+    html += '<button class="guild-btn" onclick="doCreateGuild()">创建</button></div>';
+    content.innerHTML = html;
+  } else {
+    // 已有公会
+    const lv = Guild.guildLevel(guild);
+    const bonus = Guild.levelBonuses(lv);
+    let html = '<div class="guild-card">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+    html += '<span class="guild-name">' + guild.name + '</span>';
+    html += '<span style="color:#aaa;font-size:12px">Lv.' + lv + '</span></div>';
+    html += '<div class="guild-stat"><span>经验</span><span>' + Math.round(guild.exp) + ' / ' + Math.round(Guild.guildExpForLevel(lv)) + '</span></div>';
+    html += '<div class="reinc-progress"><div class="reinc-progress-fill" style="width:' + Math.min(100, guild.exp / Guild.guildExpForLevel(lv) * 100) + '%"></div></div>';
+    html += '<div class="guild-stat"><span>公会加成</span><span>攻击+' + Math.round(bonus.atkPct * 100) + '% 生命+' + Math.round(bonus.hpPct * 100) + '% 防御+' + Math.round(bonus.defPct * 100) + '%</span></div>';
+    html += '</div>';
+    html += '<div style="font-weight:bold;color:#ffd700;font-size:13px;margin-bottom:6px">成员 (' + guild.members.length + ')</div>';
+    for (const m of guild.members) {
+      const role = m.role === 'leader' ? '👑' : (m.role === 'officer' ? '⭐' : '');
+      html += '<div class="guild-member"><span>' + role + ' ' + m.name + '</span><span>贡献 ' + (m.contribution || 0) + '</span></div>';
+    }
+    html += '<div style="margin-top:12px;display:flex;gap:6px">';
+    html += '<button class="guild-btn" onclick="doDonateGuild()">💰 捐献 500 金</button>';
+    html += '<button class="guild-btn" style="border-color:#a44;color:#f88" onclick="doLeaveGuild()">退出公会</button></div>';
+    content.innerHTML = html;
+  }
+}
+function doCreateGuild() {
+  const name = document.getElementById('guild-create-name');
+  if (!name || !name.value.trim()) return;
+  const g = Guild.makeGuild(name.value.trim(), '你');
+  if (Guild.canCreate(playerGold, false)) {
+    playerGold -= Guild.CREATE_COST;
+    window.playerGuild = g; saveGame();
+    addFloatText(player.x, player.y - 50, '🏛️ 创建公会: ' + g.name, '#ffd700');
+    renderGuildPanel();
+  } else {
+    addFloatText(player.x, player.y - 40, '金币不足!', '#f88');
+  }
+}
+function doJoinGuild(name) {
+  const g = { name: name, leader: '某会长', level: 1, exp: 0, members: [{ name: '你', role: 'member', contribution: 0, joinTime: Date.now() }, { name: '某会长', role: 'leader', contribution: 500, joinTime: Date.now() }], announcements: '', createdAt: Date.now() };
+  Guild.addMember(g, '你');
+  window.playerGuild = g; saveGame();
+  addFloatText(player.x, player.y - 50, '🏛️ 加入公会: ' + name, '#ffd700');
+  renderGuildPanel();
+}
+function doDonateGuild() {
+  const g = window.playerGuild;
+  if (!g) return;
+  if (playerGold < 500) { addFloatText(player.x, player.y - 40, '金币不足!', '#f88'); return; }
+  Guild.donateGold(g, '你', 500);
+  playerGold -= 500; saveGame();
+  playerStats = calcPlayerStats(playerProfession, playerLevel, Object.values(playerEquipment));
+  renderGuildPanel(); if (typeof updateTopBarUI === 'function') updateTopBarUI();
+  addFloatText(player.x, player.y - 50, '💰 捐献成功!', '#ffd700');
+}
+function doLeaveGuild() {
+  if (window.playerGuild) {
+    Guild.removeMember(window.playerGuild, '你');
+    window.playerGuild = null; saveGame();
+    renderGuildPanel(); addFloatText(player.x, player.y - 50, '已退出公会', '#f88');
+  }
+}
+
+// ── 坐骑外观面板 ──
+let _mountTab = 'mount';
+function openMountPanel() {
+  document.getElementById('mount-panel').style.display = 'flex';
+  renderMountTabs();
+  renderMountPanel(_mountTab);
+}
+function closeMountPanel() {
+  document.getElementById('mount-panel').style.display = 'none';
+}
+function renderMountTabs() {
+  let html = '<div class="mount-tab' + (_mountTab === 'mount' ? ' active' : '') + '" onclick="switchMountTab(\'mount\')">坐骑</div>';
+  html += '<div class="mount-tab' + (_mountTab === 'outlook' ? ' active' : '') + '" onclick="switchMountTab(\'outlook\')">外观</div>';
+  document.getElementById('mount-tabs').innerHTML = html;
+}
+function switchMountTab(t) { _mountTab = t; renderMountTabs(); renderMountPanel(t); }
+function renderMountPanel(tab) {
+  if (typeof Mount === 'undefined') return;
+  if (!window.playerMountCol) window.playerMountCol = Mount.makeMountCollection();
+  const col = window.playerMountCol;
+  let html = '<div style="font-size:11px;color:#aaa;margin-bottom:8px">当前移速: ' + (Mount.playerMountSpeed(col) * 100).toFixed(0) + '%</div>';
+  if (tab === 'mount') {
+    for (const [id, m] of Object.entries(Mount.MOUNTS)) {
+      const owned = !!(col.owned && col.owned[id]);
+      const active = col.active === id;
+      const rarityColor = {common:'#aaa',rare:'#48f',epic:'#c6f',legendary:'#fa0'}[m.rarity] || '#aaa';
+      html += '<div class="mount-card" style="border-color:' + (active ? '#4c4' : 'rgba(255,255,255,0.06)') + '">';
+      html += '<div class="mount-icon">' + ({whiteHorse:'🐴',wolf:'🐺',dragon:'🐉',phoenix:'🦅',warHorse:'🐎'}[id] || '🐴') + '</div>';
+      html += '<div class="mount-info"><div class="name">' + m.name + (active ? ' (已装备)' : '') + '</div>';
+      html += '<div class="stat">速度 +' + Math.round(m.speedBonus * 100) + '%</div>';
+      html += '<div class="rarity" style="color:' + rarityColor + '">' + ({common:'普通',rare:'稀有',epic:'史诗',legendary:'传说'}[m.rarity] || m.rarity) + '</div></div>';
+      if (owned && active) html += '<button class="mount-btn" onclick="doUnequipMount()">卸下</button>';
+      else if (owned) html += '<button class="mount-btn active" onclick="doEquipMount(\'' + id + '\')">装备</button>';
+      else html += '<button class="mount-btn" onclick="doPurchaseMount(\'' + id + '\')">购买 (' + (m.cost.gold || 0) + '金)</button>';
+      html += '</div>';
+    }
+  } else {
+    // 外观
+    for (const [id, o] of Object.entries(Mount.OUTLOOKS)) {
+      const owned = col.outlooks && col.outlooks[id];
+      html += '<div class="mount-card">';
+      html += '<span class="mount-swatch" style="background:' + o.color + '"></span>';
+      html += '<div class="mount-info"><div class="name">' + o.name + '</div></div>';
+      if (owned) html += '<span style="color:#4c4">✓ 已拥有</span>';
+      else if (id === 'default') html += '<span style="color:#aaa">默认</span>';
+      else html += '<button class="mount-btn" onclick="doPurchaseOutlook(\'' + id + '\')">购买 (' + (o.cost.gold || 0) + '金)</button>';
+      html += '</div>';
+    }
+  }
+  document.getElementById('mount-content').innerHTML = html;
+}
+function doPurchaseMount(id) {
+  if (!window.playerMountCol) window.playerMountCol = Mount.makeMountCollection();
+  const m = Mount.MOUNTS[id]; if (!m) return;
+  const cost = m.cost.gold || 0;
+  if (playerGold < cost) { addFloatText(player.x, player.y - 40, '金币不足!', '#f88'); return; }
+  if (Mount.purchaseMount(window.playerMountCol, id, { gold: playerGold })) {
+    playerGold -= cost; saveGame();
+    addFloatText(player.x, player.y - 50, '🐴 获得: ' + m.name, '#ffd700');
+    renderMountPanel(_mountTab); if (typeof updateTopBarUI === 'function') updateTopBarUI();
+  }
+}
+function doEquipMount(id) {
+  if (!window.playerMountCol) return;
+  Mount.equipMount(window.playerMountCol, id);
+  saveGame(); renderMountPanel(_mountTab);
+  addFloatText(player.x, player.y - 50, '🐴 已装备 ' + (Mount.MOUNTS[id] ? Mount.MOUNTS[id].name : ''), '#ffd700');
+}
+function doUnequipMount() {
+  if (!window.playerMountCol) return;
+  Mount.unequipMount(window.playerMountCol);
+  saveGame(); renderMountPanel(_mountTab);
+}
+function doPurchaseOutlook(id) {
+  if (!window.playerMountCol) window.playerMountCol = Mount.makeMountCollection();
+  if (!window.playerMountCol.outlooks) window.playerMountCol.outlooks = {};
+  const o = Mount.OUTLOOKS[id]; if (!o || !o.cost) return;
+  if (playerGold < o.cost.gold) { addFloatText(player.x, player.y - 40, '金币不足!', '#f88'); return; }
+  if (Mount.purchaseOutlook(window.playerMountCol.outlooks, id, playerGold)) {
+    playerGold -= o.cost.gold; saveGame();
+    addFloatText(player.x, player.y - 50, '🎨 获得外观: ' + o.name, '#ffd700');
+    renderMountPanel(_mountTab); if (typeof updateTopBarUI === 'function') updateTopBarUI();
+  }
+}
+
+// ── 镶嵌附魔面板 ──
+let _gemEquipUid = null;
+function openGemPanel(uid) {
+  _gemEquipUid = uid;
+  document.getElementById('gem-panel').style.display = 'flex';
+  renderGemPanel();
+}
+function closeGemPanel() {
+  document.getElementById('gem-panel').style.display = 'none';
+  _gemEquipUid = null;
+}
+function findEquipByUid(uid) {
+  for (const k in playerEquipment) if (playerEquipment[k] && playerEquipment[k].uid === uid) return playerEquipment[k];
+  return playerBackpack.find(e => e && e.uid === uid);
+}
+function renderGemPanel() {
+  if (typeof GemEnchant === 'undefined') return;
+  const eq = findEquipByUid(_gemEquipUid);
+  const c = document.getElementById('gem-content'); if (!c) return;
+  if (!eq) { c.innerHTML = '<div style="color:#aaa;text-align:center;padding:20px">未选择装备</div>'; return; }
+  document.getElementById('gem-equip-name').textContent = eq.name || '';
+  if (!eq.sockets) eq.sockets = [];
+  if (!eq.enchants) eq.enchants = [];
+  let html = '<div class="gem-section"><div class="sec-title">镶嵌 (' + eq.sockets.filter(s => s).length + '/' + eq.sockets.length + ')</div><div style="display:flex;flex-wrap:wrap">';
+  for (let i = 0; i < Math.max(1, GemEnchant.MAX_SOCKETS); i++) {
+    const gem = eq.sockets[i];
+    const gemColor = gem ? (GemEnchant.GEM_TYPES[gem.type] ? GemEnchant.GEM_TYPES[gem.type].color : '#6cf') : '#555';
+    html += '<div class="gem-slot ' + (gem ? 'filled' : '') + '" style="' + (gem ? '--gem-color:' + gemColor : '') + '">';
+    if (gem) {
+      html += '<div class="gem-icon">💎</div><div style="font-size:10px;color:' + gemColor + '">' + (GemEnchant.GEM_TYPES[gem.type] ? GemEnchant.GEM_TYPES[gem.type].name : gem.type) + '</div>';
+      html += '<button class="mount-btn" style="font-size:10px" onclick="doRemoveGem(' + i + ')">卸下</button>';
+    } else {
+      html += '<div style="font-size:10px;color:#666">空</div>';
+      html += '<select class="gem-select" onchange="doSocketGem(' + i + ', this.value)"><option value="">镶嵌...</option>';
+      for (const [gt, gd] of Object.entries(GemEnchant.GEM_TYPES)) {
+        const gem = GemEnchant.makeGem(gt, 'rare');
+        if (gem) html += '<option value="' + gt + '">' + gd.name + ' (' + (GemEnchant.gemStat(gem) ? GemEnchant.gemStat(gem).value : '') + ')</option>';
+      }
+      html += '</select>';
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  if (eq.sockets.length < GemEnchant.MAX_SOCKETS) {
+    const cost = GemEnchant.SOCKET_COST[eq.sockets.length] || 9999;
+    html += '<div style="margin-top:6px"><button class="guild-btn" onclick="doAddSocket()">开孔 (' + cost + '金)</button></div>';
+  }
+  html += '</div>';
+  // 附魔
+  html += '<div class="gem-section"><div class="sec-title">附魔 (' + eq.enchants.length + '/3)</div>';
+  for (const en of eq.enchants) {
+    const v = en.pct ? Math.round(en.value * 100) + '%' : Math.round(en.value);
+    html += '<div class="ench-entry">' + (en.type || '?') + ' +' + v + '</div>';
+  }
+  if (eq.enchants.length < 3) {
+    const cost = GemEnchant.enchantCost(eq);
+    html += '<button class="guild-btn" onclick="doEnchant()">附魔 (' + cost + '金)</button>';
+  }
+  html += '</div>';
+  c.innerHTML = html;
+}
+function doAddSocket() {
+  const eq = findEquipByUid(_gemEquipUid); if (!eq) return;
+  const idx = eq.sockets ? eq.sockets.length : 0;
+  if (idx >= GemEnchant.MAX_SOCKETS) return;
+  const cost = GemEnchant.SOCKET_COST[idx] || 9999;
+  if (playerGold < cost) { addFloatText(player.x, player.y - 40, '金币不足!', '#f88'); return; }
+  playerGold -= cost;
+  if (!eq.sockets) eq.sockets = [];
+  GemEnchant.addSocket(eq);
+  saveGame(); renderGemPanel(); if (typeof updateTopBarUI === 'function') updateTopBarUI();
+}
+function doSocketGem(idx, type) {
+  if (!type) return;
+  const eq = findEquipByUid(_gemEquipUid); if (!eq) return;
+  const gem = GemEnchant.makeGem(type, 'rare');
+  if (gem) GemEnchant.socketGem(eq, gem, idx);
+  saveGame(); renderGemPanel();
+}
+function doRemoveGem(idx) {
+  const eq = findEquipByUid(_gemEquipUid); if (!eq) return;
+  GemEnchant.removeGem(eq, idx);
+  saveGame(); renderGemPanel();
+}
+function doEnchant() {
+  const eq = findEquipByUid(_gemEquipUid); if (!eq) return;
+  const cost = GemEnchant.enchantCost(eq);
+  if (playerGold < cost) { addFloatText(player.x, player.y - 40, '金币不足!', '#f88'); return; }
+  playerGold -= cost;
+  GemEnchant.applyEnchant(eq);
+  saveGame(); renderGemPanel();
+  addFloatText(player.x, player.y - 50, '✨ 附魔成功!', '#6cf');
+  if (typeof updateTopBarUI === 'function') updateTopBarUI();
+}
+
+// ── 洗练面板 ──
+let _refineEquipUid = null;
+let _refineCat = 'atk';
+function openRefinePanel(uid) {
+  _refineEquipUid = uid;
+  document.getElementById('refine-panel').style.display = 'flex';
+  renderRefinePanel();
+}
+function closeRefinePanel() {
+  document.getElementById('refine-panel').style.display = 'none';
+  _refineEquipUid = null;
+}
+function renderRefinePanel() {
+  if (typeof Refine === 'undefined') return;
+  const eq = findEquipByUid(_refineEquipUid);
+  const c = document.getElementById('refine-content'); if (!c) return;
+  if (!eq) { c.innerHTML = '<div style="color:#aaa;text-align:center;padding:20px">未选择装备</div>'; return; }
+  document.getElementById('refine-equip-name').textContent = eq.name || '';
+  // 分类标签
+  let html = '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">';
+  for (const cat of Refine.REFINE_CATEGORIES) {
+    html += '<div class="refine-cat' + (cat === _refineCat ? ' active' : '') + '" onclick="switchRefineCat(\'' + cat + '\')">' + ({atk:'攻击',def:'防御',hp:'生命',crit:'暴击',spd:'速度',special:'特殊'}[cat] || cat) + '</div>';
+  }
+  html += '</div>';
+  // 当前词缀
+  if (eq.affixes && eq.affixes.length) {
+    html += '<div style="font-size:12px;color:#aaa;margin-bottom:6px">当前词缀:</div>';
+    for (let i = 0; i < eq.affixes.length; i++) {
+      const af = eq.affixes[i];
+      const locked = eq._lockedAffixes && eq._lockedAffixes.includes(i);
+      html += '<div class="refine-affix">';
+      html += '<span style="flex:1;color:' + (locked ? '#ff8' : '#cde') + '">' + (af.display || af.type + ' +' + (af.displayValue || '')) + '</span>';
+      html += '<button class="refine-lock' + (locked ? ' locked' : '') + '" onclick="doToggleLock(' + i + ')">' + (locked ? '🔒' : '🔓') + '</button>';
+      html += '</div>';
+    }
+  }
+  const cost = Refine.refineCost(eq.quality, eq._lockedAffixes ? eq._lockedAffixes.length : 0);
+  html += '<div style="text-align:center;margin:10px 0"><button class="guild-btn" onclick="doRefine()">洗练 (' + cost + '金)</button></div>';
+  html += '<div id="refine-result" style="font-size:12px;color:#aaa;text-align:center"></div>';
+  c.innerHTML = html;
+}
+function switchRefineCat(cat) { _refineCat = cat; renderRefinePanel(); }
+function doToggleLock(idx) {
+  const eq = findEquipByUid(_refineEquipUid); if (!eq) return;
+  if (!eq._lockedAffixes) eq._lockedAffixes = [];
+  const i = eq._lockedAffixes.indexOf(idx);
+  if (i >= 0) { eq._lockedAffixes.splice(i, 1); }
+  else { eq._lockedAffixes.push(idx); }
+  saveGame(); renderRefinePanel();
+}
+function doRefine() {
+  const eq = findEquipByUid(_refineEquipUid); if (!eq) return;
+  const cost = Refine.refineCost(eq.quality, eq._lockedAffixes ? eq._lockedAffixes.length : 0);
+  if (playerGold < cost) { addFloatText(player.x, player.y - 40, '金币不足!', '#f88'); return; }
+  if (!Refine.canRefine(eq)) { addFloatText(player.x, player.y - 40, '无可洗练词缀', '#aaa'); return; }
+  playerGold -= cost;
+  const r = Refine.rollRefine(_refineCat, eq.quality || 'common');
+  if (r) {
+    document.getElementById('refine-result').innerHTML = '<div class="refine-result">新词缀: ' + r.stat + ' +' + (r.pct ? Math.round(r.value * 100) + '%' : Math.round(r.value)) + '</div>';
+    addFloatText(player.x, player.y - 50, '🔧 洗练成功!', '#6cf');
+    playerStats = calcPlayerStats(playerProfession, playerLevel, Object.values(playerEquipment));
+  }
+  saveGame(); if (typeof updateTopBarUI === 'function') updateTopBarUI();
+}
+
+// ── 四象核心面板 ──
+function openCorePanel() {
+  document.getElementById('core-panel').style.display = 'flex';
+  renderCorePanel();
+}
+function closeCorePanel() {
+  document.getElementById('core-panel').style.display = 'none';
+}
+function renderCorePanel() {
+  if (typeof CoreSystem === 'undefined') return;
+  if (!window.playerCores) window.playerCores = [];
+  if (!window.playerCoreInv) window.playerCoreInv = [];
+  const loadout = window.playerCores;
+  const inv = window.playerCoreInv;
+  const c = document.getElementById('core-content'); if (!c) return;
+  // 套装检查
+  const setLv = CoreSystem.checkSetBonus(loadout);
+  const setDesc = CoreSystem.SET_BONUSES[setLv] ? CoreSystem.SET_BONUSES[setLv].desc : '无套装效果';
+  const totalB = CoreSystem.calcTotalBonuses(loadout);
+  // 核心槽
+  let html = '<div class="core-grid">';
+  for (let i = 0; i < CoreSystem.CORE_SLOTS; i++) {
+    const core = loadout[i];
+    const color = core ? (CoreSystem.CORES[core.type] ? CoreSystem.CORES[core.type].color : '#888') : '#555';
+    html += '<div class="core-slot ' + (core ? 'filled' : '') + '" style="border-color:' + color + '" onclick="' + (core ? 'doRemoveCore(' + i + ')' : '') + '">';
+    if (core) {
+      const coreDef = CoreSystem.CORES[core.type];
+      html += '<div class="core-name" style="color:' + color + '">' + (coreDef ? coreDef.name : core.type) + '</div>';
+      html += '<div class="core-rank">★' + core.rank + '/10</div>';
+      const bonus = CoreSystem.coreBonuses(core);
+      let bonusStr = '';
+      for (const [k, v] of Object.entries(bonus)) {
+        if (v > 0) bonusStr += (k === 'critRate' ? '暴击+' + Math.round(v * 100) + '% ' : k.includes('Dmg') ? k.replace('Dmg','') + '+' + Math.round(v * 100) + '% ' : k + '+' + v + ' ');
+      }
+      html += '<div class="core-bonus">' + bonusStr + '</div>';
+      const upCost = CoreSystem.coreUpgradeCost(core);
+      html += '<button class="mount-btn" style="font-size:10px;margin-top:4px" onclick="event.stopPropagation();doUpgradeCore(' + i + ')">升级 (' + upCost.gold + '金)</button>';
+    } else {
+      html += '<div style="color:#666;font-size:12px">空槽位</div>';
+      if (inv.length) {
+        html += '<select class="gem-select" onchange="doEquipCore(' + i + ', this.value)"><option value="">镶嵌...</option>';
+        for (const ci of inv) {
+          const cd = CoreSystem.CORES[ci.type];
+          html += '<option value="' + ci.type + '">' + (cd ? cd.name : ci.type) + ' ★' + ci.rank + '</option>';
+        }
+        html += '</select>';
+      }
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  // 套装效果
+  const setColors = {0:'#555',1:'#8c8',2:'#ff8',3:'#fa0',4:'#f44'};
+  html += '<div class="core-set" style="border:1px solid ' + (setColors[setLv] || '#555') + ';background:rgba(0,0,0,0.2)">';
+  html += '<div style="color:' + (setColors[setLv] || '#aaa') + ';font-weight:bold">套装效果 (' + setLv + '/4)</div>';
+  for (let slv = 1; slv <= 4; slv++) {
+    const sb = CoreSystem.SET_BONUSES[slv];
+    if (sb) html += '<div style="font-size:11px;color:' + (slv <= setLv ? '#4c4' : '#555') + '">' + (slv <= setLv ? '✓' : '✗') + ' ' + sb.desc + '</div>';
+  }
+  html += '</div>';
+  // 背包中核心
+  if (!inv.length) html += '<div style="font-size:11px;color:#666;text-align:center;margin-top:8px">背包中无核心，击杀Boss获得</div>';
+  c.innerHTML = html;
+}
+function doEquipCore(slot, type) {
+  if (!type) return;
+  if (!window.playerCores) window.playerCores = [];
+  const core = CoreSystem.makeCore(type, 1);
+  CoreSystem.equipCore(window.playerCores, core, slot);
+  saveGame(); renderCorePanel();
+  addFloatText(player.x, player.y - 50, '🌀 装备核心!', '#6cf');
+}
+function doRemoveCore(slot) {
+  if (!window.playerCores) return;
+  const core = window.playerCores[slot];
+  if (!window.playerCoreInv) window.playerCoreInv = [];
+  window.playerCoreInv.push(core);
+  CoreSystem.removeCore(window.playerCores, slot);
+  saveGame(); renderCorePanel();
+}
+function doUpgradeCore(slot) {
+  if (!window.playerCores) return;
+  const core = window.playerCores[slot];
+  if (!core) return;
+  const cost = CoreSystem.coreUpgradeCost(core);
+  if (playerGold < (cost.gold || 0)) { addFloatText(player.x, player.y - 40, '金币不足!', '#f88'); return; }
+  if (cost.coreFragments > 0 && (window.playerInventory && window.playerInventory.coreFragments || 0) < cost.coreFragments) {
+    addFloatText(player.x, player.y - 40, '核心碎片不足!', '#f88'); return;
+  }
+  playerGold -= cost.gold || 0;
+  if (CoreSystem.upgradeCore(core)) {
+    saveGame(); renderCorePanel();
+    addFloatText(player.x, player.y - 50, '⭐ 核心升级! ★' + core.rank, '#ffd700');
+  }
 }
 
 function useUltimate() {
@@ -4292,6 +5020,14 @@ function saveGame() {
     equipment: playerEquipment, backpack: playerBackpack,
     mapIndex: currentMapIndex, clearedMaps: Array.from(clearedMaps),
     quest: (typeof Quest !== 'undefined' && Quest.getState) ? Quest.getState() : null,
+    attribs: window.playerAttribs || null,
+    attribResetCount: window.__attrResetCount || 0,
+    reincState: window.playerReincState || null,
+    guild: window.playerGuild || null,
+    mountCol: window.playerMountCol || null,
+    cores: window.playerCores || null,
+    coreInv: window.playerCoreInv || null,
+    archetypeState: window.playerArchetypeState || null,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) {}
   if (typeof Account !== 'undefined') Account.syncProfile();
@@ -4757,6 +5493,8 @@ function renderBackpack() {
                   '<button class="bp-btn bp-enhance" onclick="enhanceEquip(\'' + eq.uid + '\')">⚒强化 ' + GameEconomy.enhCost(eq.enhanceLevel || 0, { equipLevel: eq.level || 0 }) + '</button>' +
                   '<button class="bp-btn bp-reforge" onclick="reforgeEquip(\'' + eq.uid + '\')">♻重铸 ' + (typeof NPCShop !== 'undefined' ? NPCShop.reforgeCost(eq, { serverAvgLevel: SERVER_AVG_LEVEL }) : '?') + '</button>' +
                   '<button class="bp-btn bp-sell" onclick="sellFromBackpack(\'' + eq.uid + '\')">卖 ' + backpackSellPrice(eq) + '</button>' +
+                  '<button class="bp-btn bp-sell" onclick="openGemPanel(\'' + eq.uid + '\')">💎镶嵌</button>' +
+                  '<button class="bp-btn bp-sell" onclick="openRefinePanel(\'' + eq.uid + '\')">🔧洗练</button>' +
                   '<button class="bp-btn bp-discard" onclick="discardFromBackpack(\'' + eq.uid + '\')">丢弃</button>' +
                 '</div>' +
                 (eq.enhanceLevel ? '<div class="bp-enh">已强化 +' + eq.enhanceLevel + '</div>' : '') +
@@ -6130,6 +6868,14 @@ function selectProfession(prof) {
     currentMapIndex = (typeof save.mapIndex === 'number') ? save.mapIndex : 0;
     playerAchPoints = save.achPoints || 0;
     achUnlocked = new Set(save.achUnlocked || []);
+    // 新系统状态恢复
+    if (typeof Attributes !== 'undefined') window.playerAttribs = save.attribs || Attributes.makeAttribs();
+    window.__attrResetCount = save.attribResetCount || 0;
+    if (typeof Reincarnation !== 'undefined') window.playerReincState = save.reincState || Reincarnation.makeReincarnation();
+    if (typeof Guild !== 'undefined') window.playerGuild = save.guild || null;
+    if (typeof Mount !== 'undefined') window.playerMountCol = save.mountCol || Mount.makeMountCollection();
+    if (typeof CoreSystem !== 'undefined') { window.playerCores = save.cores || []; window.playerCoreInv = save.coreInv || []; }
+    if (typeof Archetype !== 'undefined') window.playerArchetypeState = save.archetypeState || Archetype.makeArchetypeState();
     addFloatText(player.x, player.y, `读取存档 Lv.${playerLevel} · ${curMap().name}`, '#ffd700');
   }
 
