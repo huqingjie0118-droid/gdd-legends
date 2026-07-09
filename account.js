@@ -230,6 +230,18 @@
       if (p1 !== p2) { err.textContent = '两次密码不一致'; return; }
       var r = await this.api('/api/register', { method: 'POST', body: { username: u, password: p1 } });
       if (!r.data.ok) {
+        // 后端不可用时，fallback 到 localStorage 假注册（开发/展示模式）
+        if (r.data.error && (r.data.error.includes('启动') || r.data.error.includes('网络错误'))) {
+          var localUsers = JSON.parse(localStorage.getItem('_localUsers') || '{}');
+          if (localUsers[u]) { err.textContent = '用户名已存在（本地）'; return; }
+          localUsers[u] = { password: p1, createdAt: Date.now() };
+          localStorage.setItem('_localUsers', JSON.stringify(localUsers));
+          localStorage.setItem('_localUser', u);
+          this.token = 'local-' + u + '-' + Date.now();
+          this.user = u;
+          await this.doLogin(u, p1, false); // 走离线登录
+          return;
+        }
         err.textContent = (r.data.errors && (r.data.errors.username || r.data.errors.password || r.data.errors.email)) || '注册失败';
         return;
       }
@@ -271,7 +283,23 @@
       var err = document.getElementById('login-err');
       if (!username || !password) { if (err) err.textContent = '请输入账号和密码'; return; }
       var r = await this.api('/api/login', { method: 'POST', body: { identifier: username, password: password, remember: !!remember } });
-      if (!r.data.ok) { if (err) err.textContent = r.data.error || '登录失败'; return; }
+      if (!r.data.ok) {
+        // 后端不可用→localStorage 假登录
+        if (r.data.error && (r.data.error.includes('启动') || r.data.error.includes('网络错误') || r.status === 0)) {
+          var localUsers = JSON.parse(localStorage.getItem('_localUsers') || '{}');
+          if (localUsers[username] && localUsers[username].password === password) {
+            this.token = 'local-' + username + '-' + Date.now();
+            this.user = { id: 'local-' + username, username: username, displayName: username, createdAt: Date.now() };
+            try { localStorage.setItem('legends_token', this.token); } catch (e) {}
+            await this.afterAuth();
+            return;
+          }
+          if (err) err.textContent = '用户名或密码错误（本地）';
+          return;
+        }
+        if (err) err.textContent = r.data.error || '登录失败';
+        return;
+      }
       this.token = r.data.token;
       this.user = r.data.user;
       try { localStorage.setItem('legends_token', this.token); } catch (e) {}
@@ -284,6 +312,17 @@
         this.user = r.data.user;
         this.myProfile = r.data.profile;
         await this.afterAuth();
+      } else if (r.status === 0 || (r.data.error && r.data.error.includes('启动'))) {
+        // 后端不可用：尝试用 localStorage 恢复登录
+        var saved = localStorage.getItem('_localUser');
+        if (saved) {
+          this.user = { id: 'local-' + saved, username: saved, displayName: saved, createdAt: Date.now() };
+          this.token = 'local-' + saved + '-' + Date.now();
+          await this.afterAuth();
+        } else {
+          this.token = null;
+          try { localStorage.removeItem('legends_token'); } catch (e) {}
+        }
       } else {
         this.token = null;
         try { localStorage.removeItem('legends_token'); } catch (e) {}
