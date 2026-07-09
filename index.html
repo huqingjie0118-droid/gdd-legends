@@ -259,6 +259,20 @@ canvas {
 .prof-card .prof-icon { font-size: 44px; margin-bottom: 10px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6)); }
 .prof-card .prof-name { color: #fff; font-size: 19px; font-weight: bold; margin-bottom: 8px; text-shadow: 0 0 10px rgba(255,215,0,0.3); }
 .prof-card .prof-desc { color: #9a94ad; font-size: 11px; line-height: 1.6; }
+/* 打断闪白 */
+#interrupt-flash {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 9999;
+  background: rgba(255,255,255,0.3);
+  opacity: 0; transition: none;
+}
+#interrupt-flash.flash-out {
+  animation: flashOut 0.25s ease-out forwards;
+}
+@keyframes flashOut {
+  0%   { opacity: 0.8; }
+  100% { opacity: 0; }
+}
 /* 提示文字 */
 #hint-text {
   position: absolute;
@@ -627,7 +641,8 @@ canvas {
     </div>
     
     <!-- 操作提示 -->
-    <div id="hint-text">WASD 移动 | 点击敌人攻击 | 数字键 1-5 释放技能 | 空格 拾取 | B 背包</div>
+    <div id="interrupt-flash"></div>
+    <div id="hint-text">WASD 移动 | 点击敌人攻击 | 数字键 1-5 释放技能 | 空格 拾取 | B 背包 | Boss读条时攻击=打断</div>
   </div>
   
   <!-- 职业选择 -->
@@ -802,25 +817,25 @@ const PROF_BASE = {
 // 技能定义
 const SKILL_DEFS = {
   warrior: [
-    { id:'atk',     name:'普攻',     icon:'⚔️', mpCost:0,   cd:0.5,  range:CFG.AUTO_ATTACK_RANGE, damageMult:1.0, effect:'slash',   desc: '基础攻击' },
-    { id:'fire',    name:'烈火剑法', icon:'🔥', mpCost:18,  cd:5.0,  range:CFG.SKILL_RANGE,      damageMult:1.9, effect:'fireSwirl', desc: '火焰漩涡，范围伤害' },
-    { id:'cleave',  name:'横扫千军', icon:'💥', mpCost:25,  cd:6.0,  range:90,                   damageMult:1.6, effect:'cleave',   desc: '横扫前方所有敌人' },
-    { id:'rage',    name:'野蛮冲撞', icon:'💨', mpCost:30,  cd:10.0, range:200,                  damageMult:1.0, effect:'charge',   desc: '冲锋并眩晕敌人' },
-    { id:'berserk', name:'狂暴',     icon:'😤', mpCost:50,  cd:26.0, range:0,                    damageMult:0,  effect:'berserk', desc: '攻速提升50%，持续8秒' },
+    { id:'atk',     name:'普攻',     icon:'⚔️', mpCost:0,   cd:0.5,  range:CFG.AUTO_ATTACK_RANGE, damageMult:1.0, effect:'slash',   desc: '基础攻击', cast:0 },
+    { id:'fire',    name:'烈火剑法', icon:'🔥', mpCost:18,  cd:5.0,  range:CFG.SKILL_RANGE,      damageMult:1.9, effect:'fireSwirl', desc: '火焰漩涡，范围伤害', cast:0.25 },
+    { id:'cleave',  name:'横扫千军', icon:'💥', mpCost:25,  cd:6.0,  range:90,                   damageMult:1.6, effect:'cleave',   desc: '横扫前方所有敌人', cast:0.3 },
+    { id:'rage',    name:'野蛮冲撞', icon:'💨', mpCost:30,  cd:10.0, range:200,                  damageMult:1.0, effect:'charge',   desc: '冲锋并眩晕敌人', cast:0.4 },
+    { id:'berserk', name:'狂暴',     icon:'😤', mpCost:50,  cd:26.0, range:0,                    damageMult:0,  effect:'berserk', desc: '攻速提升50%，持续8秒', cast:0.3 },
   ],
   mage: [
-    { id:'atk',     name:'普攻',     icon:'✨', mpCost:0,   cd:0.5,  range:CFG.AUTO_ATTACK_RANGE, damageMult:1.0, effect:'magicBall', desc: '魔法弹' },
-    { id:'ice',     name:'冰咆哮',   icon:'❄️', mpCost:22,  cd:5.0,  range:CFG.SKILL_RANGE,      damageMult:1.8, effect:'iceBlast',  desc: '范围冰冻伤害' },
-    { id:'thunder', name:'雷电术',   icon:'⚡', mpCost:16,  cd:3.5, range:CFG.SKILL_RANGE,      damageMult:1.6, effect:'lightning', desc: '单体雷电重击' },
-    { id:'firewall',name:'火墙',     icon:'🔥', mpCost:35,  cd:12.0, range:100,                 damageMult:0.6, effect:'fireWall',  desc: '制造火墙区域伤害' },
-    { id:'meteor',  name:'陨石',     icon:'☄️', mpCost:60,  cd:22.0, range:200,                 damageMult:2.6, effect:'meteor',   desc: '召唤天外陨石' },
+    { id:'atk',     name:'普攻',     icon:'✨', mpCost:0,   cd:0.5,  range:CFG.AUTO_ATTACK_RANGE, damageMult:1.0, effect:'magicBall', desc: '魔法弹', cast:0 },
+    { id:'ice',     name:'冰咆哮',   icon:'❄️', mpCost:22,  cd:5.0,  range:CFG.SKILL_RANGE,      damageMult:1.8, effect:'iceBlast',  desc: '范围冰冻伤害', cast:0.35 },
+    { id:'thunder', name:'雷电术',   icon:'⚡', mpCost:16,  cd:3.5, range:CFG.SKILL_RANGE,      damageMult:1.6, effect:'lightning', desc: '单体雷电重击', cast:0.2 },
+    { id:'firewall',name:'火墙',     icon:'🔥', mpCost:35,  cd:12.0, range:100,                 damageMult:0.6, effect:'fireWall',  desc: '制造火墙区域伤害', cast:0.5 },
+    { id:'meteor',  name:'陨石',     icon:'☄️', mpCost:60,  cd:22.0, range:200,                 damageMult:2.6, effect:'meteor',   desc: '召唤天外陨石', cast:0.8 },
   ],
   taoist: [
-    { id:'atk',     name:'普攻',     icon:'🌀', mpCost:0,   cd:0.5,  range:CFG.AUTO_ATTACK_RANGE, damageMult:1.0, effect:'soulBall', desc: '灵魂火符' },
-    { id:'poison',  name:'施毒术',   icon:'☠️', mpCost:14,  cd:4.0,  range:CFG.SKILL_RANGE,      damageMult:1.1, effect:'poison',   desc: '持续中毒伤害' },
-    { id:'heal',    name:'治愈术',   icon:'💚', mpCost:20,  cd:8.0,  range:0,                     damageMult:0,  effect:'heal',     desc: '恢复生命值' },
-    { id:'summon',  name:'召唤骷髅', icon:'💀', mpCost:40,  cd:36.0, range:0,                     damageMult:0,  effect:'summon',   desc: '召唤骷髅助战' },
-    { id:'shield',  name:'幽灵盾',   icon:'🛡️', mpCost:28,  cd:18.0, range:0,                     damageMult:0,  effect:'shield',   desc: '大幅减伤，持续6秒' },
+    { id:'atk',     name:'普攻',     icon:'🌀', mpCost:0,   cd:0.5,  range:CFG.AUTO_ATTACK_RANGE, damageMult:1.0, effect:'soulBall', desc: '灵魂火符', cast:0 },
+    { id:'poison',  name:'施毒术',   icon:'☠️', mpCost:14,  cd:4.0,  range:CFG.SKILL_RANGE,      damageMult:1.1, effect:'poison',   desc: '持续中毒伤害', cast:0.2 },
+    { id:'heal',    name:'治愈术',   icon:'💚', mpCost:20,  cd:8.0,  range:0,                     damageMult:0,  effect:'heal',     desc: '恢复生命值', cast:0.3 },
+    { id:'summon',  name:'召唤骷髅', icon:'💀', mpCost:40,  cd:36.0, range:0,                     damageMult:0,  effect:'summon',   desc: '召唤骷髅助战', cast:0.6 },
+    { id:'shield',  name:'幽灵盾',   icon:'🛡️', mpCost:28,  cd:18.0, range:0,                     damageMult:0,  effect:'shield',   desc: '大幅减伤，持续6秒', cast:0.4 },
   ],
 };
 
@@ -1362,26 +1377,43 @@ function applyCombatToTarget(target, baseDmg, opts) {
       if (cb.pendingDot)  { target.poisonTimer = Math.max(target.poisonTimer, 4); target.poisonDamage = Math.max(target.poisonDamage, baseDmg * 0.10); cb.pendingDot = 0; }
     }
     Combat.addPoise(cb, opts.isHeavy ? 20 : 10, opts.isHeavy);
-    // 打断读条（Interrupt）：Boss 蓄力时受击双倍失衡，率先破防=打断→额外伤害+15%
+    // 打断读条（Interrupt）：Boss 蓄力时受击双倍失衡，率先破防=打断
     let interrupted = false;
     if (opts.fromPlayer && target.isBoss && target.bossCasting && typeof Combat !== 'undefined') {
-      const ir = Combat.interruptResult(cb.poise, cb.maxPoise, opts.isHeavy ? 20 : 10, true);
-      cb.poise = ir.nextPoise;
-      if (ir.interrupted) {
-        cb.poise = 0;
-        cb.breakUntil = now + 2500;
-        cb.vulnerableUntil = now + 2500;
-        target.bossCasting = false;
-        target.bossCastTimer = 0;
-        target.bossCastPattern = null;
-        target.bossCastPhaseObj = null;
-        target.bossAtkTimer = 1.2;
-        addFloatText(target.x, target.y - target.size, '⛔ 打断!', '#ff5');
-        addFloatText(target.x, target.y - target.size - 30, '易伤+15%', '#ffa');
-        screenShake = Math.max(screenShake, 14); hitStop = Math.max(hitStop, 0.08);
-        Sound.cast('charge');
-        // 易伤加成立即生效：后续伤害 ×1.15，持续 2.5 秒
-        interrupted = true;
+      // 免疫检查：打断免疫期内不可打断
+      if (Combat.canInterrupt(cb, now)) {
+        const ir = Combat.interruptResult(cb.poise, cb.maxPoise, opts.isHeavy ? 20 : 10, true);
+        cb.poise = ir.nextPoise;
+        if (ir.interrupted) {
+          // 打断时机奖励：按剩余读条比例计算眩晕时长
+          const totalCast = (target.bossCastPhaseObj && target.bossCastPhaseObj.cast) || 1;
+          const stunDur = Combat.interruptStunDuration(target.bossCastTimer, totalCast, 2000);
+          cb.poise = 0;
+          cb.breakUntil = now + stunDur;
+          cb.vulnerableUntil = now + stunDur;
+          // 打断免疫 8 秒
+          Combat.applyInterruptCooldown(cb, now);
+          target.bossCasting = false;
+          target.bossCastTimer = 0;
+          target.bossCastPattern = null;
+          target.bossCastPhaseObj = null;
+          target.bossAtkTimer = 1.2;
+          // 大反馈：震屏 + 闪白 + 浮字
+          screenShake = Math.max(screenShake, 18); hitStop = Math.max(hitStop, 0.10);
+          const label = stunDur >= 3000 ? '⛔ 完美打断!' : '⛔ 打断!';
+          addFloatText(target.x, target.y - target.size - 40, label, '#ff5');
+          addFloatText(target.x, target.y - target.size - 60, '易伤+' + Math.round(ir.bonusPct * 100) + '%', '#ffa');
+          // 闪白效果
+          const flashEl = document.getElementById('interrupt-flash');
+          if (flashEl) { flashEl.classList.remove('flash-out'); void flashEl.offsetWidth; flashEl.classList.add('flash-out'); }
+          // Boss 白色闪烁标记
+          target.interruptFlash = 0.5;
+          Sound.cast('charge');
+          interrupted = true;
+        }
+      } else {
+        // 免疫期内：显示免疫提示
+        addFloatText(target.x, target.y - target.size - 20, '🛡️ 免疫', '#aaa');
       }
     }
     if (!interrupted && Combat.checkBreak(cb, now)) {
@@ -1462,6 +1494,12 @@ let targetEnemy = null;
 
 // 技能CD
 let skillCDs = {};
+
+// 玩家吟唱（读条施法）
+let playerCastTimer = 0;
+let playerCastSkill = null;   // 当前吟唱的 skill 对象
+let playerCastTotal = 0;      // 总吟唱时间（秒）
+let playerCastCallback = null; // 吟唱完成后的执行函数
 
 // 游戏统计
 let stats_totalKills = 0;
@@ -2439,6 +2477,11 @@ class Entity {
       this.animTime += dt;
       return false;
     }
+    // 打断闪烁→触发受击白闪
+    if (this.interruptFlash > 0) {
+      this.hitFlash = Math.max(this.hitFlash, this.interruptFlash);
+      this.interruptFlash = Math.max(0, this.interruptFlash - dt);
+    }
     
     this.animTime += dt;
     
@@ -2479,7 +2522,13 @@ class Entity {
     if (this._cb) this._cb.hp = this.hp;
     this.hitFlash = 0.15;
     this.state = 'hit';
-    if (this.isPlayer) { screenShake = Math.max(screenShake, 7); hitStop = Math.max(hitStop, 0.045); Sound.hurt(); }
+    if (this.isPlayer) { screenShake = Math.max(screenShake, 7); hitStop = Math.max(hitStop, 0.045); Sound.hurt();
+      // 受击打断吟唱
+      if (playerCastTimer > 0) {
+        playerCastTimer = 0; playerCastSkill = null; playerCastCallback = null;
+        addFloatText(this.x, this.y - this.size - 20, '⛔ 吟唱被打断!', '#f88');
+      }
+    }
     else { screenShake = Math.max(screenShake, amount >= this.maxHp * 0.18 ? 4 : screenShake); Sound.hit(); }
     
     // 浮动伤害数字
@@ -2836,6 +2885,7 @@ class Enemy extends Entity {
     this.bossCastPattern = null;
     this.bossCastPhase = null;
     this.interruptBonus = 0; // 打断成功→后续伤害+15%，存为 atk 倍率加成
+    this.interruptFlash = 0; // 打断闪烁计时
     this.interruptLabel = null; // 打断动画浮字
     this.interruptLabelTimer = 0;
     // 战斗深化：每敌挂载 Combat.Fighter（弱点/韧性/元素附着）
@@ -3431,6 +3481,9 @@ function useUltimate() {
 function useSkill(skillId) {
   if (!player || player.state === 'dead') return;
   
+  // 吟唱中禁止再放技能
+  if (playerCastTimer > 0) return;
+  
   const skills = SKILL_DEFS[playerProfession] || [];
   const skill = skills.find(s => s.id === skillId);
   if (!skill) return;
@@ -3451,7 +3504,25 @@ function useSkill(skillId) {
   player.mp -= mpCost;
   skillCDs[cdKey] = now + skill.cd * 1000 * (1 - playerStats.cdr);
 
-  // 战斗深化：技能命中登记连击（用 performance.now 时钟与 doAttack 一致）
+  // 若技能需要吟唱（cast > 0）→ 进入吟唱状态
+  const castTime = skill.cast || 0;
+  if (castTime > 0) {
+    playerCastTimer = castTime;
+    playerCastSkill = skill;
+    playerCastTotal = castTime;
+    playerCastCallback = function () { executeSkill(skill, now); };
+    player.state = 'cast';
+    player.animTime = 0;
+    Sound.cast('charge');
+    return;
+  }
+
+  // 瞬发：直接执行
+  executeSkill(skill, now);
+}
+
+// 技能执行体（由 useSkill 瞬发调用或吟唱完成回调）
+function executeSkill(skill, now) {
   const cnow = performance.now();
   const f = pf();
   if (f) Combat.registerCombo(f, cnow);
@@ -5093,6 +5164,26 @@ function update(dt) {
   if (player) {
     if (player.state === 'dead' && !gameOver) showGameOver();
     player.update(dt);
+    
+    // 玩家吟唱推进：每次 tick 递减，到 0 执行技能
+    if (playerCastTimer > 0) {
+      playerCastTimer -= dt;
+      // 移动取消吟唱
+      if (player.vx !== 0 || player.vy !== 0) {
+        playerCastTimer = 0;
+        playerCastSkill = null;
+        playerCastCallback = null;
+        if (player.state === 'cast') player.state = 'idle';
+      } else if (playerCastTimer <= 0) {
+        playerCastTimer = 0;
+        if (playerCastCallback) {
+          playerCastCallback();
+          playerCastCallback = null;
+        }
+        playerCastSkill = null;
+      }
+    }
+    
     // 区域进入提示
     let zn = '';
     for (const z of ZONES) {
@@ -5446,23 +5537,74 @@ function render() {
     }
   }
 
-  // Boss 读条渲染（打断 Interrupt 视觉提示）
+  // Boss 读条渲染（打断 Interrupt 视觉提示 — 升级版）
   for (const e of enemies) {
     if (e.state === 'dead' || !e.isBoss || !e.bossCasting) continue;
-    const sx = e.x - camera.x, sy = e.y - camera.y - e.size - 24;
-    const pct = Math.max(0, e.bossCastTimer / (e.bossCastPhaseObj ? e.bossCastPhaseObj.cast : 1));
-    // 红色进度条背景
-    ctx.fillStyle = 'rgba(60,0,0,0.7)';
-    ctx.fillRect(sx - 28, sy, 56, 8);
-    // 读条填充（从红→黄递增）
-    const fill = 1 - pct;
-    ctx.fillStyle = fill > 0.5 ? '#f44' : '#fc4';
-    ctx.fillRect(sx - 27, sy + 1, 54 * fill, 6);
-    // 读条说明
-    ctx.font = 'bold 11px sans-serif';
+    const sx = e.x - camera.x, sy = e.y - camera.y - e.size - 32;
+    const totalCast = (e.bossCastPhaseObj && e.bossCastPhaseObj.cast) || 1;
+    const pct = Math.max(0, e.bossCastTimer / totalCast);
+    const t = performance.now() / 1000;
+    const barW = 70;
+    
+    // Boss 名 + 技能名
+    ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#ffa';
-    ctx.fillText('⚡ 蓄力中...', sx, sy - 5);
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText(e.bossCastPhaseObj ? e.bossCastPhaseObj.name : '蓄力', sx, sy - 2);
+    ctx.font = '9px sans-serif';
+    ctx.fillStyle = '#ccc';
+    ctx.fillText((e.name || 'Boss') + ' · 读条', sx, sy + 10);
+    
+    // 进度条背景
+    ctx.fillStyle = 'rgba(40,0,0,0.85)';
+    ctx.fillRect(sx - barW/2, sy + 14, barW, 10);
+    
+    // 进度条颜色：绿色(>60%)→黄色(30-60%)→红色(<30%)，最后30%脉冲
+    const fillPct = 1 - pct;
+    let barColor;
+    if (pct < 0.3) {
+      // 最后30%：危险区红色脉冲
+      const pulse = 0.7 + 0.3 * Math.sin(t * 8);
+      barColor = 'rgb(255,' + Math.round(60 * pulse) + ',0)';
+    } else if (pct < 0.6) {
+      barColor = '#fc4'; // 黄色警告
+    } else {
+      barColor = '#4c4'; // 绿色安全
+    }
+    ctx.fillStyle = barColor;
+    ctx.fillRect(sx - barW/2 + 1, sy + 15, (barW - 2) * fillPct, 8);
+    
+    // 打断时机提示
+    if (pct > 0.6) {
+      ctx.font = 'bold 8px sans-serif';
+      ctx.fillStyle = '#8f8';
+      ctx.fillText('✓ 可打断（完美时机）', sx, sy + 32);
+    } else if (pct > 0.3) {
+      ctx.font = 'bold 8px sans-serif';
+      ctx.fillStyle = '#ff8';
+      ctx.fillText('⚡ 即将完成', sx, sy + 32);
+    } else {
+      ctx.font = 'bold 8px sans-serif';
+      ctx.fillStyle = '#f88';
+      const pulse = 0.7 + 0.3 * Math.sin(t * 10);
+      ctx.fillText('⚠ 危险！即将释放', sx, sy + 32);
+    }
+  }
+
+  // 玩家读条渲染（吟唱）
+  if (player && playerCastTimer > 0 && playerCastSkill && player.state !== 'dead') {
+    const px = player.x - camera.x, py = player.y - camera.y - player.size - 36;
+    const pctCast = Math.max(0, playerCastTimer / (playerCastTotal || 1));
+    const castW = 50;
+    ctx.fillStyle = 'rgba(0,40,80,0.85)';
+    ctx.fillRect(px - castW/2, py, castW, 8);
+    ctx.fillStyle = '#6cf';
+    ctx.fillRect(px - castW/2 + 1, py + 1, (castW - 2) * (1 - pctCast), 6);
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#adf';
+    const castName = playerCastSkill.name || '吟唱';
+    ctx.fillText('✦ ' + castName + ' ✦', px, py - 4);
   }
 
   // 任务世界内容（NPC + 可采集物）绘制

@@ -285,6 +285,44 @@ t('triggerAllExplosions 全类型', () => {
   return r.results.burn.exploded && r.results.poison.exploded && r.results.bleed.exploded && !r.results.frostbite.exploded && r.totalDmg > 0;
 });
 
+// ── 打断免疫 / 时机奖励 ──
+t('canInterrupt 无 fighter→true', () => ok(C.canInterrupt(null, 0)));
+t('canInterrupt 无免疫期→true', () => {
+  const f = C.makeFighter();
+  return ok(C.canInterrupt(f, 1000));
+});
+t('canInterrupt 免疫期内→false', () => {
+  const f = C.makeFighter();
+  C.applyInterruptCooldown(f, 1000);
+  return !C.canInterrupt(f, 1000 + 1000);
+});
+t('canInterrupt 免疫过期→true', () => {
+  const f = C.makeFighter();
+  C.applyInterruptCooldown(f, 1000);
+  return ok(C.canInterrupt(f, 1000 + C.BOSS_INTERRUPT_COOLDOWN));
+});
+t('applyInterruptCooldown 设置免疫时间', () => {
+  const f = C.makeFighter();
+  C.applyInterruptCooldown(f, 5000);
+  return ok(f.interruptImmuneUntil === 5000 + C.BOSS_INTERRUPT_COOLDOWN);
+});
+t('interruptStunDuration 早期打断 +60%', () => {
+  const dur = C.interruptStunDuration(0.7, 1.0, 2000);
+  return approx(dur, 2000 * 1.6, 1);
+});
+t('interruptStunDuration 中期打断 +20%', () => {
+  const dur = C.interruptStunDuration(0.4, 1.0, 2000);
+  return approx(dur, 2000 * 1.2, 1);
+});
+t('interruptStunDuration 晚期打断 -20%', () => {
+  const dur = C.interruptStunDuration(0.2, 1.0, 2000);
+  return approx(dur, 2000 * 0.8, 1);
+});
+t('interruptStunDuration 0输入→baseStun', () => {
+  const dur = C.interruptStunDuration(0, 0, 2000);
+  return ok(dur === 2000);
+});
+
 console.log('\n==== 结果：' + pass + ' 通过 / ' + fail + ' 失败 ====');
 if (fail > 0) { console.log('失败项：'); fails.forEach(x => console.log('  - ' + x)); process.exit(1); }
 else { console.log('全部通过 ✅'); process.exit(0); }

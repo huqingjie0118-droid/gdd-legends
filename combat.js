@@ -174,6 +174,30 @@
   // 返回 { interrupted, bonusDmg }
   // casting: 是否在读条中；poise: 当前失衡值；maxPoise: 失衡上限
   // hitPoise: 这次攻击造成的失衡量（取整）；ifBroken: checkBreak 结果
+  const BOSS_INTERRUPT_COOLDOWN = 8000; // ms，打断后免疫时间
+
+  // 检查是否可以打断（打断免疫期内不可打断）
+  function canInterrupt(f, now) {
+    if (!f) return true;
+    return !f.interruptImmuneUntil || now >= f.interruptImmuneUntil;
+  }
+
+  // 标记打断免疫冷却
+  function applyInterruptCooldown(f, now) {
+    if (!f) return;
+    f.interruptImmuneUntil = now + BOSS_INTERRUPT_COOLDOWN;
+  }
+
+  // 打断时机奖励：越早打断，眩晕越久
+  // castTimer: 当前剩余读条时间(秒)；totalCast: 总读条时间(秒)；baseStun: 基础眩晕ms
+  function interruptStunDuration(castTimer, totalCast, baseStun) {
+    if (!castTimer || !totalCast || totalCast <= 0) return baseStun || 2000;
+    const pct = castTimer / totalCast; // 剩余比例，越高越早打断
+    if (pct > 0.6) return Math.round((baseStun || 2000) * 1.6); // 早期打断 +60%
+    if (pct > 0.3) return Math.round((baseStun || 2000) * 1.2); // 中期打断 +20%
+    return Math.round((baseStun || 2000) * 0.8); // 晚期打断 -20%
+  }
+
   function interruptResult(poise, maxPoise, hitPoise, isCasting) {
     if (!isCasting) return { interrupted: false, bonusPct: 0 };
     const nextPoise = Math.min(maxPoise, poise + hitPoise * 2); // 读条期间双倍失衡
@@ -368,6 +392,7 @@
     weaknessMultiplier, computeReaction, processElementHit,
     addPoise, checkBreak, isBroken, vulnerableMult, executeResult, resolveDamage,
     interruptResult,
+    BOSS_INTERRUPT_COOLDOWN, canInterrupt, applyInterruptCooldown, interruptStunDuration,
     getDotStacks, applyDot, applyDotStacks, tickDotDamage,
     triggerDotExplosion, triggerAllExplosions,
     RESOURCE_DEFS, makeResource, resourcePct, spendResource,
