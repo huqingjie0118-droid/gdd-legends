@@ -513,6 +513,7 @@ canvas {
     
     <!-- 装备栏 -->
     <div id="equip-bar"></div>
+    <div id="weapon-range-indicator" style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:125px;font-size:14px;pointer-events:none;text-shadow:0 0 6px rgba(0,0,0,.8);z-index:2;"></div>
     
     <!-- 掉落面板 -->
     <div id="drop-panel"></div>
@@ -932,6 +933,22 @@ const CFG = {
   SKILL_RANGE: 220,
 };
 
+// ==================== 武器类型与攻击距离 ====================
+// 仅战士职业受武器类型影响，法师/道士使用技能固定距离
+const WEAPON_TYPES = {
+  dagger:  { name: '短剑', range: 80,  desc: '极近距离·攻速快',   icon: '🗡️', atkMult: 1.0, atkSpeed: 1.15 },
+  sword:   { name: '长剑', range: 110, desc: '中距离·均衡',      icon: '⚔️', atkMult: 1.0, atkSpeed: 1.0  },
+  polearm: { name: '长柄', range: 150, desc: '远距离·高伤害',    icon: '🔱', atkMult: 1.15, atkSpeed: 0.85 },
+  staff:   { name: '法杖', range: 220, desc: '远程·法系专用',    icon: '🪄', atkMult: 1.0, atkSpeed: 1.0  },
+  bow:     { name: '弓',   range: 250, desc: '远程·通用',        icon: '🏹', atkMult: 1.0, atkSpeed: 0.9  },
+};
+// 战士职业可选武器池（短剑/长剑/长柄）
+const WARRIOR_WEAPONS = ['dagger', 'sword', 'polearm'];
+// 非战士武器默认使用标准近战距离
+function getDefaultWeaponType(prof) {
+  return prof === 'warrior' ? 'sword' : 'staff';
+}
+
 // ==================== 数值平衡总配置（单一数据源） ====================
 // 所有再平衡均以此为基准，便于统一调参与评审。
 const BAL = {
@@ -1281,8 +1298,31 @@ function generateEquipment(sourceLevel) {
     dura: 100, duraMax: 100, // 耐久（经济 sink：磨损→修理费；归零该件失效）
     baseAtk: randInt(1, Math.round(10 * mult * levelScale)),
     baseDef: randInt(0, Math.round(5 * mult * levelScale)),
+    // 武器类型（仅 weapon 槽有效，影响战士攻击距离）
+    weaponType: slotKey === 'weapon' ? (pick(WARRIOR_WEAPONS)) : null,
     enhanceLevel: 0,
   };
+}
+
+// ==================== 攻击距离系统（战士武器类型） ====================
+// 返回当前武器对应的攻击距离（像素）
+// 非战士职业使用默认技能距离
+function getWeaponRange(prof, equipment) {
+  // 法师/道士不按武器算距离
+  if (prof !== 'warrior') return CFG.AUTO_ATTACK_RANGE;
+  if (!equipment || !equipment.weapon) return CFG.AUTO_ATTACK_RANGE;
+  const wType = equipment.weapon.weaponType;
+  const def = WEAPON_TYPES[wType];
+  return def ? def.range : CFG.AUTO_ATTACK_RANGE;
+}
+
+// 获取当前装备武器类型的显示名
+function getWeaponTypeName(prof, equipment) {
+  if (prof !== 'warrior') return null;
+  if (!equipment || !equipment.weapon) return null;
+  const wType = equipment.weapon.weaponType;
+  const def = WEAPON_TYPES[wType];
+  return def ? def.name + ' · ' + def.desc : null;
 }
 
 // 计算玩家完整属性
@@ -1305,6 +1345,7 @@ function calcPlayerStats(prof, level, equipment) {
     cdr: 0,
     luck: 0,
     skillRange: 0,
+    weaponRange: CFG.AUTO_ATTACK_RANGE, // 战士武器距离，calcPlayerStats 末尾会重算
   };
   
   for (const eq of (equipment || [])) {
@@ -1384,6 +1425,8 @@ function calcPlayerStats(prof, level, equipment) {
     }
   }
   stats.skillMult  = (typeof skillMultMap !== 'undefined') ? skillMultMap : {};
+  // 武器攻击距离（仅战士）
+  stats.weaponRange = getWeaponRange(prof, window.playerEquipment);
   stats.maxHp = stats.hp;
   stats.maxMp = stats.mp;
 
@@ -2932,17 +2975,24 @@ class Player extends Entity {
     this.x = clamp(this.x, this.size, CFG.MAP_W - this.size);
     this.y = clamp(this.y, this.size, CFG.MAP_H - this.size);
     
-    // 自动攻击最近敌人
+    // 自动攻击最近敌人（使用武器距离，仅战士受武器类型影响）
     if (targetEnemy && targetEnemy.state !== 'dead') {
       const d = dist(this.x, this.y, targetEnemy.x, targetEnemy.y);
-      if (d <= CFG.AUTO_ATTACK_RANGE && this.attackCd <= 0) {
+      const atkRange = this.isPlayer && typeof playerStats !== 'undefined' ? (playerStats.weaponRange || CFG.AUTO_ATTACK_RANGE) : CFG.AUTO_ATTACK_RANGE;
+      if (d <= atkRange && this.attackCd <= 0) {
         this.doAttack(targetEnemy);
       }
     }
   }
   
   doAttack(target) {
-    this.attackCd = 0.5 * (1 - playerStats.cdr) / ((this.attackSpeedMult || 1) * (playerStats.atkSpeedPct || 1));
+    // 武器攻速倍率（短剑快、长柄慢）
+    let weaponAtkSpeed = 1;
+    if (playerProfession === 'warrior' && playerEquipment && playerEquipment.weapon) {
+      const wDef = WEAPON_TYPES[playerEquipment.weapon.weaponType];
+      if (wDef) weaponAtkSpeed = wDef.atkSpeed;
+    }
+    this.attackCd = 0.5 * (1 - playerStats.cdr) / ((this.attackSpeedMult || 1) * (playerStats.atkSpeedPct || 1) * weaponAtkSpeed);
     this.state = 'attack';
     this.animTime = 0;
     this.dir = target.x > this.x ? 1 : -1;
@@ -2965,6 +3015,11 @@ class Player extends Entity {
 
     // 伤害计算
     let dmg = playerStats.atk * ultAtkMult() * rand(0.9, 1.1);
+    // 武器类型伤害倍率（长柄高伤、短剑标准）
+    if (playerProfession === 'warrior' && playerEquipment && playerEquipment.weapon) {
+      const wDef = WEAPON_TYPES[playerEquipment.weapon.weaponType];
+      if (wDef && wDef.atkMult !== 1.0) dmg *= wDef.atkMult;
+    }
     // 狂怒叠层攻击加成
     if (window._furyState && window._furyState.stacks > 0) {
       const pct = (syn && syn.merged.syn_atkStackPerHit) || 0.03;
@@ -5329,7 +5384,14 @@ function buildEquipBar() {
       div.classList.add('has-item');
       div.style.borderColor = eq.color;
       div.textContent = slot.icon;
-      div.title = `${eq.name} (${eq.qualityName})\n` + eq.affixes.map(a => a.name).join('\n');
+      // 武器：tooltip 增加武器类型和攻击距离
+      if (slot.key === 'weapon' && eq.weaponType) {
+        const wDef = WEAPON_TYPES[eq.weaponType];
+        const rangeInfo = wDef ? `【${wDef.name}】攻击距离: ${wDef.range}px | 攻速: ×${wDef.atkSpeed} | ${wDef.desc}` : '';
+        div.title = `${eq.name} (${eq.qualityName})\n${rangeInfo}\n` + eq.affixes.map(a => a.name).join('\n');
+      } else {
+        div.title = `${eq.name} (${eq.qualityName})\n` + eq.affixes.map(a => a.name).join('\n');
+      }
     } else {
       div.textContent = '-';
       div.title = slot.name + '（空）';
@@ -5359,6 +5421,20 @@ function buildEquipBar() {
     }
     container.appendChild(div);
   });
+  // 武器攻击距离指示器（仅战士显示）
+  const rangeEl = document.getElementById('weapon-range-indicator');
+  if (rangeEl) {
+    if (playerProfession === 'warrior' && playerEquipment && playerEquipment.weapon) {
+      const wType = playerEquipment.weapon.weaponType;
+      const wDef = WEAPON_TYPES[wType] || WEAPON_TYPES.sword;
+      const r = getWeaponRange(playerProfession, playerEquipment);
+      rangeEl.style.display = 'inline';
+      rangeEl.title = `武器: ${wDef.name} · 攻击距离: ${r}px · ${wDef.desc} · 攻速倍率: ${(wDef.atkSpeed * 100).toFixed(0)}%`;
+      rangeEl.innerHTML = `${wDef.icon} <span style="font-size:10px;color:#8af">${r}px</span>`;
+    } else {
+      rangeEl.style.display = 'none';
+    }
+  }
 }
 
 // 掉落面板
@@ -5486,7 +5562,7 @@ function renderBackpack() {
       html += '<div class="bp-item drop-quality-' + eq.quality + '">' +
                 '<div class="bp-item-name" style="color:' + eq.color + '">' + eq.name + '</div>' +
                 (eq.set && typeof Sets !== 'undefined' && Sets.SETS[eq.set] ? '<div class="bp-set" style="color:' + Sets.SETS[eq.set].color + '">【' + Sets.SETS[eq.set].name + '】</div>' : '') +
-                '<div class="bp-item-slot">' + eq.qualityName + ' ' + eq.slotName + '</div>' +
+                '<div class="bp-item-slot">' + eq.qualityName + ' ' + eq.slotName + (eq.weaponType && WEAPON_TYPES[eq.weaponType] ? ' · ' + WEAPON_TYPES[eq.weaponType].name + ' 距离:' + WEAPON_TYPES[eq.weaponType].range + 'px' : '') + '</div>' +
                 '<div class="bp-affixes">' + affixHtml + '</div>' +
                 '<div class="bp-cmp">对比已穿：' + cmp + '</div>' +
                 '<div class="bp-actions">' +
@@ -6785,7 +6861,14 @@ function setupInput() {
       }
       if (nearest) {
         targetEnemy = nearest;
-        player.doAttack(nearest);
+        // 检查攻击距离（战士受武器类型影响）
+        const clickAtkRange = playerStats && playerStats.weaponRange ? playerStats.weaponRange : CFG.AUTO_ATTACK_RANGE;
+        const dToTarget = dist(player.x, player.y, nearest.x, nearest.y);
+        if (dToTarget <= clickAtkRange) {
+          player.doAttack(nearest);
+        } else {
+          addFloatText(player.x, player.y - player.size * 1.5, '⚔️ 距离不足!', '#f93');
+        }
       } else if (typeof Destructible !== 'undefined' && destructibles.length) {
         // 点击可破坏物
         for (const d of destructibles) {
