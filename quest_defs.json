@@ -1,0 +1,755 @@
+{
+  "version": 1,
+  "schema": {
+    "arc": [
+      "id",
+      "name",
+      "map",
+      "minLevel",
+      "order",
+      "chapters[]"
+    ],
+    "chapter": [
+      "id",
+      "name",
+      "prereqArc",
+      "prereqChapter",
+      "npc",
+      "objectives[]",
+      "rewards",
+      "onComplete"
+    ],
+    "objective": [
+      "id",
+      "type",
+      "target",
+      "amount",
+      "desc",
+      "rewards"
+    ],
+    "objectiveType": [
+      "reach",
+      "kill",
+      "collect",
+      "talk",
+      "boss",
+      "escort",
+      "explore"
+    ],
+    "state": [
+      "locked",
+      "available",
+      "active",
+      "completed",
+      "abandoned",
+      "failed"
+    ],
+    "profileFields": [
+      "mainQuests",
+      "questObjectives",
+      "coreFragments"
+    ]
+  },
+  "arcs": [
+    {
+      "id": "arc0",
+      "name": "觉醒印记",
+      "map": "比奇城郊",
+      "minLevel": 1,
+      "order": 0,
+      "theme": "序章·觉醒",
+      "story": "身负渊墟印记的觉醒者初临比奇城郊，遇引路人玄机子，习得战斗与拾取，击退首波哥布林兽潮，初闻「四象核心」传说。",
+      "twist": "阿蛮透露兽潮只是裂隙异动的前兆，真正的威胁在远方。",
+      "pacingNote": "平缓教学 → 小高潮(首Boss哥布林王) → 线索交接。",
+      "rewardTier": "新手期·奠基",
+      "chapters": [
+        {
+          "id": "arc0_ch1",
+          "name": "初临渊墟",
+          "flavor": "踏入启明原野，印记初醒，学战学拾。",
+          "trigger": { "condition": "进入比奇城郊（无前置，自动触发）", "hook": "玄机子现身启明原野，召唤初临的觉醒者。" },
+          "progression": [
+            "踏入启明原野，完成 reach 目标；",
+            "击退 3 只史莱姆，熟悉战斗与掉落；",
+            "与玄机子对话，习得技能与拾取；",
+            "采集 2 株疗伤草药，掌握资源收集。"
+          ],
+          "onCompleteFeedback": "玄机子颔首：「印记已认主。前路尚远，去吧。」",
+          "prereqArc": null,
+          "prereqChapter": null,
+          "npc": "遗迹导师·玄机子",
+          "objectives": [
+            {
+              "id": "arc0_ch1_o1",
+              "type": "reach",
+              "target": "比奇城郊",
+              "amount": 1,
+              "desc": "踏入启明原野",
+              "rewards": {
+                "exp": 20
+              }
+            },
+            {
+              "id": "arc0_ch1_o2",
+              "type": "kill",
+              "target": "slime",
+              "amount": 3,
+              "desc": "击退 3 只史莱姆",
+              "rewards": {
+                "exp": 40,
+                "gold": 50
+              }
+            },
+            {
+              "id": "arc0_ch1_o3",
+              "type": "talk",
+              "target": "遗迹导师·玄机子",
+              "amount": 1,
+              "desc": "学习技能与拾取",
+              "rewards": {
+                "exp": 30
+              }
+            },
+            {
+              "id": "arc0_ch1_o4",
+              "type": "collect",
+              "target": "疗伤草药",
+              "amount": 2,
+              "desc": "采集 2 株疗伤草药",
+              "rewards": {
+                "exp": 30,
+                "gold": 30
+              }
+            }
+          ],
+          "rewards": {
+            "exp": 100,
+            "gold": 200,
+            "skillPoints": 1,
+            "unlock": "tutorial_done"
+          },
+          "onComplete": {
+            "unlockNextChapter": "arc0_ch2"
+          }
+        },
+        {
+          "id": "arc0_ch2",
+          "name": "觉醒之印",
+          "flavor": "印记即烙印，兽潮只是裂隙的第一道涟漪。",
+          "trigger": { "condition": "arc0_ch1 完成", "hook": "玄机子揭示印记真相，阿蛮燃起狼烟预警。" },
+          "progression": [
+            "听取玄机子讲述觉醒印记与守渊人烙印；",
+            "接受阿蛮的守村预警，获通往僵尸洞窟的线索。"
+          ],
+          "branches": [
+            { "id": "b_faith", "prompt": "玄机子问：你愿背负这烙印吗？", "options": [
+              { "text": "愿以印记守护渊墟。", "outcome": "玄机子微笑，印记亮了一瞬。" },
+              { "text": "我只想弄清自己是谁。", "outcome": "玄机子：「答案在四核之中。」" }
+            ]}
+          ],
+          "onCompleteFeedback": "阿蛮拍肩：「裂隙动了，村子的安危交给你了。」",
+          "prereqArc": null,
+          "prereqChapter": "arc0_ch1",
+          "npc": "遗迹导师·玄机子",
+          "objectives": [
+            {
+              "id": "arc0_ch2_o1",
+              "type": "talk",
+              "target": "遗迹导师·玄机子",
+              "amount": 1,
+              "desc": "听取觉醒印记真相",
+              "rewards": {
+                "exp": 50
+              }
+            },
+            {
+              "id": "arc0_ch2_o2",
+              "type": "talk",
+              "target": "守村人·阿蛮",
+              "amount": 1,
+              "desc": "接受守村预警，前往僵尸洞窟",
+              "rewards": {
+                "exp": 50,
+                "gold": 50
+              }
+            }
+          ],
+          "rewards": {
+            "exp": 120,
+            "gold": 100,
+            "unlock": "arc1_available"
+          },
+          "onComplete": {
+            "unlockNextArc": "arc1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "arc1",
+      "name": "原野告急",
+      "map": "比奇城郊",
+      "minLevel": 1,
+      "order": 1,
+      "theme": "第一幕·守村",
+      "story": "哥布林王率兽潮围村，觉醒者首次直面多阶段首领，护住比奇城郊，获核心碎片①线索，被引向僵尸洞窟。",
+      "twist": "碑灵残魂借阿蛮传话，揭示枯骨回廊藏着核心碎片②。",
+      "pacingNote": "紧接序章的小高潮，战斗密度上升，boss 为双阶段。",
+      "rewardTier": "新手期·初成",
+      "chapters": [
+        {
+          "id": "arc1_ch1",
+          "name": "兽潮围村",
+          "flavor": "守住村子，这是守渊人的第一道试炼。",
+          "trigger": { "condition": "arc0_ch2 完成，自动进入兽潮事件", "hook": "阿蛮敲响警钟，哥布林自林边涌来。" },
+          "progression": [
+            "听取兽潮警报，进入守村状态；",
+            "击退 8 只哥布林，清掉外围；",
+            "击败双阶段哥布林王，护住比奇城郊。"
+          ],
+          "onCompleteFeedback": "村民欢呼，阿蛮将守村信物塞入你手：「去僵尸洞窟找残魂。」",
+          "prereqArc": "arc0",
+          "prereqChapter": "arc0_ch2",
+          "npc": "守村人·阿蛮",
+          "objectives": [
+            {
+              "id": "arc1_ch1_o1",
+              "type": "talk",
+              "target": "守村人·阿蛮",
+              "amount": 1,
+              "desc": "听取兽潮警报",
+              "rewards": {
+                "exp": 30
+              }
+            },
+            {
+              "id": "arc1_ch1_o2",
+              "type": "kill",
+              "target": "goblin",
+              "amount": 8,
+              "desc": "击退 8 只哥布林",
+              "rewards": {
+                "exp": 80,
+                "gold": 120
+              }
+            },
+            {
+              "id": "arc1_ch1_o3",
+              "type": "boss",
+              "target": "goblinKing",
+              "phase": 2,
+              "desc": "击败兽潮首领（哥布林王）",
+              "rewards": {
+                "exp": 150
+              }
+            }
+          ],
+          "rewards": {
+            "exp": 200,
+            "gold": 300,
+            "skillPoints": 1,
+            "unlock": "coreFragmentClue"
+          },
+          "onComplete": {
+            "unlockNextChapter": "arc1_ch2",
+            "unlockMap": "比奇城郊_深处"
+          }
+        },
+        {
+          "id": "arc1_ch2",
+          "name": "守村人之谢",
+          "flavor": "残魂在枯骨回廊，等着你的碑文。",
+          "trigger": { "condition": "arc1_ch1 完成", "hook": "阿蛮酬谢守村之恩，托付信物与线索。" },
+          "progression": [
+            "接受阿蛮谢礼，解锁 coreFragmentClue；",
+            "取走守村信物，作为洞窟通行凭据。"
+          ],
+          "onCompleteFeedback": "信物入手，僵尸洞窟的入口在比奇城郊深处显现。",
+          "prereqArc": null,
+          "prereqChapter": "arc1_ch1",
+          "npc": "守村人·阿蛮",
+          "objectives": [
+            {
+              "id": "arc1_ch2_o1",
+              "type": "talk",
+              "target": "守村人·阿蛮",
+              "amount": 1,
+              "desc": "接受谢礼与线索",
+              "rewards": {
+                "exp": 60
+              }
+            },
+            {
+              "id": "arc1_ch2_o2",
+              "type": "collect",
+              "target": "守村信物",
+              "amount": 1,
+              "desc": "取走阿蛮的守村信物",
+              "rewards": {
+                "exp": 60,
+                "gold": 80
+              }
+            }
+          ],
+          "rewards": {
+            "exp": 150,
+            "gold": 200,
+            "unlock": "arc2_available",
+            "coreFragmentClue": 1
+          },
+          "onComplete": {
+            "unlockNextArc": "arc2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "arc2",
+      "name": "枯骨低语",
+      "map": "僵尸洞窟",
+      "minLevel": 5,
+      "order": 2,
+      "theme": "第二幕·地核",
+      "story": "深入僵尸洞窟，肃清回廊、集齐碑文残片，斩双阶段尸王，夺取核心碎片②（地之核）。",
+      "twist": "尸王死前低语「四核归一，巨龙将醒」——主角开始怀疑集核的真正目的。",
+      "pacingNote": "转折幕：首个「真相初显」节点，叙事密度高于战斗。",
+      "rewardTier": "成长期·觉醒①(职业二转)",
+      "chapters": [
+        {
+          "id": "arc2_ch1",
+          "name": "回廊探秘",
+          "flavor": "枯骨低语，守渊人的背叛藏在碑文里。",
+          "trigger": { "condition": "arc1_ch2 完成，传送至僵尸洞窟", "hook": "残魂引你入枯骨回廊。" },
+          "progression": [
+            "进入枯骨回廊（reach）；",
+            "肃清 12 具骷髅守卫，扫清通路；",
+            "收集 3 块碑文残片，唤醒地之核线索。"
+          ],
+          "onCompleteFeedback": "残魂低语：「碑文已齐，尸王……曾是守渊人。」",
+          "prereqArc": "arc1",
+          "prereqChapter": "arc1_ch2",
+          "npc": "碑灵·残魂",
+          "objectives": [
+            {
+              "id": "arc2_ch1_o1",
+              "type": "reach",
+              "target": "僵尸洞窟",
+              "amount": 1,
+              "desc": "进入枯骨回廊",
+              "rewards": {
+                "exp": 80
+              }
+            },
+            {
+              "id": "arc2_ch1_o2",
+              "type": "kill",
+              "target": "skeleton",
+              "amount": 12,
+              "desc": "肃清回廊守卫",
+              "rewards": {
+                "exp": 160,
+                "gold": 200
+              }
+            },
+            {
+              "id": "arc2_ch1_o3",
+              "type": "collect",
+              "target": "碑文残片",
+              "amount": 3,
+              "desc": "收集 3 块碑文残片",
+              "rewards": {
+                "exp": 120
+              }
+            }
+          ],
+          "rewards": {
+            "exp": 300,
+            "gold": 400,
+            "skillPoints": 1,
+            "unlock": "arc2_boss"
+          },
+          "onComplete": {
+            "unlockNextChapter": "arc2_ch2"
+          }
+        },
+        {
+          "id": "arc2_ch2",
+          "name": "尸王之陨",
+          "flavor": "四核归一，巨龙将醒——这是枷锁也是封印。",
+          "trigger": { "condition": "arc2_ch1 完成", "hook": "尸王自回廊深处苏醒。" },
+          "progression": [
+            "击败双阶段尸王；",
+            "与残魂对话，领取核心碎片②（地之核）。"
+          ],
+          "onCompleteFeedback": "尸王崩解前吐出：「四核归一，巨龙将醒！」地之核没入印记。",
+          "prereqArc": null,
+          "prereqChapter": "arc2_ch1",
+          "npc": "碑灵·残魂",
+          "objectives": [
+            {
+              "id": "arc2_ch2_o1",
+              "type": "boss",
+              "target": "corpseKing",
+              "phase": 2,
+              "desc": "击败双阶段尸王",
+              "rewards": {
+                "exp": 400
+              }
+            },
+            {
+              "id": "arc2_ch2_o2",
+              "type": "talk",
+              "target": "碑灵·残魂",
+              "amount": 1,
+              "desc": "领取核心碎片②",
+              "rewards": {
+                "exp": 100
+              }
+            }
+          ],
+          "rewards": {
+            "exp": 500,
+            "gold": 500,
+            "coreFragment": true,
+            "unlock": "advancement1_ready"
+          },
+          "onComplete": {
+            "addCoreFragment": 1,
+            "unlockNextArc": "arc3",
+            "unlockAdvancement": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "arc3",
+      "name": "焚心试炼",
+      "map": "烈焰火山",
+      "minLevel": 10,
+      "order": 3,
+      "theme": "第三幕·火核",
+      "story": "踏入烈焰火山，击退兽人部族、斩三阶段火焰魔君，夺取核心碎片③（火之核）。",
+      "twist": "魔君本是守渊人之一，被裂隙腐化；主角意识到自身印记也可能反噬。",
+      "pacingNote": "中高潮：三阶段 Boss 战，情感张力+自我怀疑。",
+      "rewardTier": "精进期·专精",
+      "chapters": [
+        {
+          "id": "arc3_ch1",
+          "name": "熔狱前行",
+          "flavor": "熔火淬意志，魔君本是守渊人。",
+          "trigger": { "condition": "arc2_ch2 完成，传送至烈焰火山", "hook": "炽迎你入焚心熔狱。" },
+          "progression": [
+            "踏入焚心熔狱（reach）；",
+            "击退 15 兽人部族，逼近火山口。"
+          ],
+          "onCompleteFeedback": "炽：「魔君在沉眠，它……曾与我同列守渊人。」",
+          "prereqArc": "arc2",
+          "prereqChapter": "arc2_ch2",
+          "npc": "炎心·炽",
+          "objectives": [
+            {
+              "id": "arc3_ch1_o1",
+              "type": "reach",
+              "target": "烈焰火山",
+              "amount": 1,
+              "desc": "踏入焚心熔狱",
+              "rewards": {
+                "exp": 150
+              }
+            },
+            {
+              "id": "arc3_ch1_o2",
+              "type": "kill",
+              "target": "orc",
+              "amount": 15,
+              "desc": "击退兽人部族",
+              "rewards": {
+                "exp": 250,
+                "gold": 300
+              }
+            }
+          ],
+          "rewards": {
+            "exp": 400,
+            "gold": 500,
+            "skillPoints": 1,
+            "unlock": "arc3_boss"
+          },
+          "onComplete": {
+            "unlockNextChapter": "arc3_ch2"
+          }
+        },
+        {
+          "id": "arc3_ch2",
+          "name": "魔君真身",
+          "flavor": "裂隙会吞噬守渊人，包括你的烙印。",
+          "trigger": { "condition": "arc3_ch1 完成", "hook": "火焰魔君睁眼。" },
+          "progression": [
+            "击败三阶段火焰魔君；",
+            "与炽对话，领取炎之核心③。"
+          ],
+          "onCompleteFeedback": "魔君消散，炽沉声：「裂隙会反噬你的烙印，小心。」",
+          "prereqArc": null,
+          "prereqChapter": "arc3_ch1",
+          "npc": "炎心·炽",
+          "objectives": [
+            {
+              "id": "arc3_ch2_o1",
+              "type": "boss",
+              "target": "flameLord",
+              "phase": 3,
+              "desc": "击败三阶段火焰魔君",
+              "rewards": {
+                "exp": 600
+              }
+            },
+            {
+              "id": "arc3_ch2_o2",
+              "type": "talk",
+              "target": "炎心·炽",
+              "amount": 1,
+              "desc": "领取炎之核心③",
+              "rewards": {
+                "exp": 150
+              }
+            }
+          ],
+          "rewards": {
+            "exp": 700,
+            "gold": 600,
+            "coreFragment": true,
+            "unlock": "arc4_available"
+          },
+          "onComplete": {
+            "addCoreFragment": 1,
+            "unlockNextArc": "arc4"
+          }
+        }
+      ]
+    },
+    {
+      "id": "arc4",
+      "name": "霜原誓约",
+      "map": "冰封雪原",
+      "minLevel": 16,
+      "order": 4,
+      "theme": "第四幕·冰核",
+      "story": "冰封雪原结盟，击退冰狼群、斩双阶段冰霜巨魔，夺取核心碎片④（冰之核）。",
+      "twist": "霜长老立誓时抛出悬念：龙裔先知·渊集四核，究竟为封印还是重开裂隙？",
+      "pacingNote": "情感高潮+悬念铺设，为终幕反转蓄力。",
+      "rewardTier": "誓约期·觉醒②(终极觉醒)",
+      "chapters": [
+        {
+          "id": "arc4_ch1",
+          "name": "雪原结盟",
+          "flavor": "冰原立誓，集核只为守护。",
+          "trigger": { "condition": "arc3_ch2 完成，传送至冰封雪原", "hook": "霜长老于风雪中候你。" },
+          "progression": [
+            "抵达霜寂冰原（reach）；",
+            "击退 12 冰狼群，守住营地。"
+          ],
+          "onCompleteFeedback": "霜：「立誓吧——集核只为守护，不为夺力。」",
+          "prereqArc": "arc3",
+          "prereqChapter": "arc3_ch2",
+          "npc": "雪原长老·霜",
+          "objectives": [
+            {
+              "id": "arc4_ch1_o1",
+              "type": "reach",
+              "target": "冰封雪原",
+              "amount": 1,
+              "desc": "抵达霜寂冰原",
+              "rewards": {
+                "exp": 200
+              }
+            },
+            {
+              "id": "arc4_ch1_o2",
+              "type": "kill",
+              "target": "iceWolf",
+              "amount": 12,
+              "desc": "击退冰狼群",
+              "rewards": {
+                "exp": 300,
+                "gold": 400
+              }
+            }
+          ],
+          "rewards": {
+            "exp": 500,
+            "gold": 600,
+            "skillPoints": 1,
+            "unlock": "arc4_boss"
+          },
+          "onComplete": {
+            "unlockNextChapter": "arc4_ch2"
+          }
+        },
+        {
+          "id": "arc4_ch2",
+          "name": "巨魔之冰",
+          "flavor": "渊要这四核何用？答案在深渊。",
+          "trigger": { "condition": "arc4_ch1 完成", "hook": "冰霜巨魔挡于封印之前。" },
+          "progression": [
+            "击败双阶段冰霜巨魔；",
+            "与霜立誓，领取霜之核心④。"
+          ],
+          "branches": [
+            { "id": "b_oath", "prompt": "霜问：若渊意欲重开裂隙，你当如何？", "options": [
+              { "text": "纵是渊，我也阻他。", "outcome": "霜沉默颔首，将霜之核交你。" },
+              { "text": "我信渊。", "outcome": "霜眼中掠过一丝疑虑，仍交予核心。" }
+            ]}
+          ],
+          "onCompleteFeedback": "霜之核入手，四核将齐。渊在深渊，静候终局。",
+          "prereqArc": null,
+          "prereqChapter": "arc4_ch1",
+          "npc": "雪原长老·霜",
+          "objectives": [
+            {
+              "id": "arc4_ch2_o1",
+              "type": "boss",
+              "target": "frostTroll",
+              "phase": 2,
+              "desc": "击败双阶段冰霜巨魔",
+              "rewards": {
+                "exp": 800
+              }
+            },
+            {
+              "id": "arc4_ch2_o2",
+              "type": "talk",
+              "target": "雪原长老·霜",
+              "amount": 1,
+              "desc": "立誓领取霜之核心④",
+              "rewards": {
+                "exp": 200
+              }
+            }
+          ],
+          "rewards": {
+            "exp": 900,
+            "gold": 700,
+            "coreFragment": true,
+            "unlock": "advancement2_ready"
+          },
+          "onComplete": {
+            "addCoreFragment": 1,
+            "unlockNextArc": "arc5",
+            "unlockAdvancement": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "arc5",
+      "name": "深渊终焉",
+      "map": "魔龙深渊",
+      "minLevel": 22,
+      "order": 5,
+      "theme": "终幕·封印",
+      "story": "魔龙深渊集齐英灵核心，与三阶段远古巨龙(初代守渊人化身)终战，以印记永久封印裂隙。",
+      "twist": "巨龙非敌而是被腐化的守渊人；结局选择「守护」而非「夺力」——无敌觉醒=以己为锁。",
+      "pacingNote": "终极高潮 → 反转结局 → 尾声升华，节奏收束。",
+      "rewardTier": "封印期·无敌觉醒(结局)",
+      "chapters": [
+        {
+          "id": "arc5_ch1",
+          "name": "集核封印",
+          "flavor": "四核已集，深渊裂隙将开。",
+          "trigger": { "condition": "arc4_ch2 完成，凭四核开启深渊传送", "hook": "渊引你入魔龙深渊。" },
+          "progression": [
+            "凭核心碎片开启深渊传送（reach）；",
+            "集齐 4 枚英灵核心，唤醒封印阵。"
+          ],
+          "onCompleteFeedback": "渊：「英灵归一，巨龙将现——它是初代守渊人的化身。」",
+          "prereqArc": "arc4",
+          "prereqChapter": "arc4_ch2",
+          "npc": "龙裔先知·渊",
+          "objectives": [
+            {
+              "id": "arc5_ch1_o1",
+              "type": "reach",
+              "target": "魔龙深渊",
+              "amount": 1,
+              "desc": "凭核心碎片开启深渊传送",
+              "rewards": {
+                "exp": 300
+              }
+            },
+            {
+              "id": "arc5_ch1_o2",
+              "type": "collect",
+              "target": "英灵核心",
+              "amount": 4,
+              "desc": "集齐 4 枚英灵核心",
+              "rewards": {
+                "exp": 400
+              }
+            }
+          ],
+          "rewards": {
+            "exp": 600,
+            "gold": 800,
+            "skillPoints": 2,
+            "unlock": "arc5_boss"
+          },
+          "onComplete": {
+            "unlockNextChapter": "arc5_ch2"
+          }
+        },
+        {
+          "id": "arc5_ch2",
+          "name": "远古终战",
+          "flavor": "以印记为锁，选择守护而非夺力。",
+          "trigger": { "condition": "arc5_ch1 完成", "hook": "远古巨龙自裂隙中抬头。" },
+          "progression": [
+            "决战三阶段远古巨龙；",
+            "与渊对话，以印记为锁封印裂隙。"
+          ],
+          "branches": [
+            { "id": "b_ending", "prompt": "巨龙垂眸：夺我之力可得无敌，以你为锁则永镇深渊。你选？", "options": [
+              { "text": "以印记为锁，选择守护。", "outcome": "无敌觉醒结局：你永镇裂隙，渊墟因你而安。" },
+              { "text": "（隐藏）夺巨龙之力。", "outcome": "若另寻秘法可触发「夺力」支线，但正史封印为守护。" }
+            ]}
+          ],
+          "onCompleteFeedback": "裂隙闭合，光自印记散开。渊：「你不是守渊人，你是渊墟本身。」",
+          "prereqArc": null,
+          "prereqChapter": "arc5_ch1",
+          "npc": "龙裔先知·渊",
+          "objectives": [
+            {
+              "id": "arc5_ch2_o1",
+              "type": "boss",
+              "target": "dragon",
+              "phase": 3,
+              "desc": "决战三阶段远古巨龙",
+              "rewards": {
+                "exp": 1500
+              }
+            },
+            {
+              "id": "arc5_ch2_o2",
+              "type": "talk",
+              "target": "龙裔先知·渊",
+              "amount": 1,
+              "desc": "封印裂隙、唤醒渊墟",
+              "rewards": {
+                "exp": 500
+              }
+            }
+          ],
+          "rewards": {
+            "exp": 2000,
+            "gold": 2000,
+            "skillPoints": 3,
+            "unlock": "game_cleared",
+            "ending": "无敌觉醒"
+          },
+          "onComplete": {
+            "unlockEnding": "invincible_awaken"
+          }
+        }
+      ]
+    }
+  ]
+}
