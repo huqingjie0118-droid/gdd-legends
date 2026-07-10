@@ -4919,6 +4919,22 @@ const Weekly = {
       }
     }
   },
+  // 通用目标推进：combo/react/break 等非击杀目标（由战斗钩子调用）
+  // —— 修复：原 Weekly 缺失 onSpecial，导致 GameStats.recordCombo/recordReaction/recordBreak
+  //     调用 Weekly.onSpecial 抛 "is not a function"，异常发生在 doAttack 伤害结算之前，
+  //     使每次攻击都不出伤、怪物不死、经验不结算 → 玩家“打几个怪就卡住”。
+  onSpecial(typeName, amount) {
+    if (!this.data.quests.length) return;
+    amount = amount || 1;
+    for (const q of this.data.quests) {
+      if (q.claimed) continue;
+      for (const o of q.objectives) {
+        if (o.done || o.type !== typeName) continue;
+        o.progress = Math.min(o.amount, o.progress + amount);
+        if (o.progress >= o.amount) o.done = true;
+      }
+    }
+  },
   claim(uid) {
     const q = this.data.quests.find(x => x.uid === uid);
     if (!q || q.claimed) return;
