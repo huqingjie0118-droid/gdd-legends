@@ -1,6 +1,6 @@
 # 传奇·觉醒 H5 ARPG — 游戏设计文档 (GDD)
 
-> 版本：v1.3 ｜ 状态：持续迭代（核心战斗/装备词条/背包/持久化/音效/5图多阶段Boss/打击感/美术升级 已落地；§8–§10 强化/附魔/交易/留存 为前瞻设计，按本 GDD 落地即形成完整闭环）｜ 适用平台：浏览器 H5 / 微信小游戏
+> 版本：v1.4 ｜ 状态：持续迭代（核心战斗/装备词条/背包/持久化/音效/5图多阶段Boss/打击感/美术升级/经济闭环/套装与词缀联动/NPC重铸/周常成就/战斗深化/环境危害/四档难度/自动化 已落地；拍卖行UI/公会/排行榜/转生/镶嵌附魔独立UI/传承 等为前瞻设计，按本 GDD 落地即形成完整闭环）｜ 适用平台：浏览器 H5 / 微信小游戏
 > 项目根目录：`E:\coumst\gdd-legends\h5-game`
 
 ---
@@ -16,6 +16,7 @@
 | v1.1.1 | 2026-07 | 主策 | 战斗平衡与渲染修复：敌人数硬上限（普通刷怪软上限 20 / 含 Boss 召唤总硬上限 22，根治真机观测到的 20→28 溢出）；自动接战新增群压求生（≥4 怪贴脸风筝后退）；修复消耗品/材料掉落渲染 `d.equip.color` 空指针崩溃 |
 | v1.2 | 2026-07 | 主策 + 系统策划 | 装备词条与品质规则系统落地：新增 `equip-rules.json`（v2，47 词条 / 6 品质，数据驱动）+ `equip-rules.js`（UMD 规则引擎，生成/评分/动态评定/升阶/校验）；实现词条三层稀有度、品质→词条层概率联动、评分算法与品质动态评定（生成只升不降、替换允许降级）、锁定/替换、升阶（材料×档序 + 成功率 clamp）；全量校验 + 环形日志；热更新 `reloadRules()` 与 `/api/equip-rules` 路由；§6.6 补实现文档 |
 | v1.3 | 2026-07 | 主策 | GDD 与代码实值对齐补全（活文档维护）：标记已落地功能——音效系统（WebAudio 程序化合成，§12.7）、5 图多阶段 Boss/传送阵/小地图（§12.8）、打击感演出 hit-stop/屏震/相机缓动/"你已陨落"面板（§4.8）、美术视觉升级（§12.9）、客户端 localStorage 存档（§12.8）；修正页眉/页脚版本号 v1.1→v1.3；里程碑 M3 标记已完成 |
+| v1.4 | 2026-07 | 主策 | GDD 与代码实值二次对齐（活文档维护）：补标记已落地系统——经济闭环（economy.js + gameEconomy.js：耐久/修理/绑金/灵玉/传送费/复活费/金币沉淀/代币周清零/通胀监控，§12.10）、装备深度（sets.js 套装 / affix_synergy.js 词缀联动 / npcshop.js 词缀重铸洗练，§12.11）、任务周常成就（questboard.js，§12.12）、战斗深化（combat.js：连击终结技/元素反应/破防/打断读条/DOT，§12.13）、环境危害与四档难度（env.js + 难度档，§12.14）、自动化便捷操作（自动拾取/战斗/技能，§12.15）；里程碑 M4/M5/M6 由"待开发"改为"部分落地"并修正章节引用错位；版本号 v1.3→v1.4 |
 
 ---
 
@@ -723,7 +724,7 @@ generateEquipment(sourceLevel, prof, opts)            // index.html 入口，兼
 
 ---
 
-## 8. 装备附魔与强化系统
+## 8. 装备附魔与强化系统（部分已实现：强化 +N 与词缀重铸/洗练见 §12.11）
 
 ### 8.1 强化（+N）
 
@@ -764,7 +765,7 @@ generateEquipment(sourceLevel, prof, opts)            // index.html 入口，兼
 
 ---
 
-## 9. 装备交易与经济系统
+## 9. 装备交易与经济系统（部分已实现：经济闭环见 §12.10；拍卖行 UI 待做）
 
 ### 9.1 货币体系
 
@@ -812,7 +813,7 @@ generateEquipment(sourceLevel, prof, opts)            // index.html 入口，兼
 
 ---
 
-## 10. 玩家心理与留存激励系统
+## 10. 玩家心理与留存激励系统（部分已实现：周常/成就见 §12.12；排行榜/活动待做）
 
 ### 10.1 Hook 模型应用
 
@@ -981,6 +982,56 @@ generateEquipment(sourceLevel, prof, opts)            // index.html 入口，兼
 
 ---
 
+### 12.10 经济系统与经济闭环（已落地）
+
+- **模块**：`economy.js`（纯函数规则引擎，`window.Economy` / Node `module.exports`，可单测）、`gameEconomy.js`（游戏内桥接，`window.GameEconomy`）。
+- **已实现能力**
+  - 金币产出：`monsterGold`（等级×地图系数）、`chestGold`、`questGold`（按难度/等级）。
+  - 强化经济：`enhCost` / `enhCumulative`（强化 +N 累计花费）、`canEnhance` / `applyEnhance`（扣金强化）。
+  - 耐久与修理：`duraScale`（耐久影响有效属性）、`repairCost`（修理费 = 缺损比例×基准）、`applyDuraLoss`（战斗掉耐久）。
+  - 传送与复活 sink：`teleportCost`（地图间传送费）、`reviveCost`（复活费，对应 §4.5 死亡演出）。
+  - 硬通货 sink：绑金 / 灵玉作为不可交易的沉没成本（对应 §9.4）。
+  - 抗通胀：`NetGoldMonitor`（`record` / `checkInflation`）按"人均日产金"指标预警；`tokenResetState` + `isoWeekKey` 实现代币周清零（经济文档硬要求）。
+- **设计对应**：§9.4 来源/消耗、§9.5 定价税收、§9.7 反通胀。
+
+### 12.11 装备深度系统（已落地）
+
+- **套装** `sets.js`（`window.Sets`）：`equippedSets` / `activeSetBonuses` / `setCollection` / `rollSetForEquip`（掉落按概率附套装归属，激活套装满加成）。
+- **词缀联动** `affix_synergy.js`（`window.AffixSynergy`）：`AFFIX_SYNERGIES` 配置 + `statAffixes` / `calcAffixSynergies`（同系词条联动加成）/ `calcOnHitProcs`（触发型特效）。
+- **NPC 重铸（洗练）** `npcshop.js`（`window.NPCShop`）：`reforgeCost`（重铸费随次数指数增长）/ `canReforge` / `applyReforge`（重 roll 词条，锁定词条保留）。
+- **设计对应**：§8.2 附魔（重铸即词缀重 roll）、§6 词条联动。
+
+### 12.12 任务 / 周常 / 成就（已落地）
+
+- **模块** `questboard.js`（`window.QuestBoard`）：`diffIndex`（四档难度映射）、`computeRewards`（经验/金币/代币，含等级碾压 `CRUSH_DIFF` 衰减）、`rollLuckyBox`（惊喜掉落，对应 P3 可变奖励）、`generate`（任务生成）、`weekKey` + `evaluateAchievements`（成就解锁）、`makeStats`。
+- **接入**：周常 Tab、成就 Tab、统计钩子（任务 #151–154）。
+- **设计对应**：§10.2 可变奖励、§10.4 成就里程碑。
+
+### 12.13 战斗深化（已落地）
+
+- **模块** `combat.js`（`window.Combat`）
+  - 连击 / 终结技：`registerCombo` / `comboDamageBonus` / `comboCritBonus` / `finisherAvailable`（≥30 连击解锁终结技）/ `finisherMultiplier`。
+  - 元素反应：`computeReaction` / `processElementHit`（aura × incoming 反应倍率）、`weaknessMultiplier`（抗性弱点）。
+  - 破防 / 霸体：`addPoise` / `checkBreak` / `isBroken` / `vulnerableMult`。
+  - 打断读条：`canInterrupt` / `interruptResult` / `interruptStunDuration`（Boss 读条 `castTime` 可被破体/高冲击打断，见 `BOSS_DATA.castTime`）。
+  - DOT 状态：`applyDot` / `getDotStacks` / `tickDotDamage`（dot→引爆连锁）。
+  - 资源分化：怒气 / 充能 / 法力（任务 #175）。
+- **设计对应**：§4 战斗系统。
+
+### 12.14 环境危害与四档难度（已落地）
+
+- **环境** `env.js`（`window.Env`）：`makeObjects`（光池/熔岩/宝箱/粒子）/ `onElementHit`（元素交互）/ `tick` / `lavaSafe`（熔岩伤害判定）。
+- **四档难度**（`DIFFICULTY` 配置，任务 #169）：敌人 HP/ATK/掉落/经验乘子，玩家开局可选。
+- **设计对应**：§5 核心循环、§4 战斗系统。
+
+### 12.15 自动化与便捷操作（已落地）
+
+- 自动拾取（按品质过滤，任务 #198）、自动战斗（贴脸/风筝切换，#199）、自动技能释放（#202）。
+- UI 开关面板（#200），手动可随时接管。
+- **设计意图**：降低重复操作疲劳，保留核心操作手感（对应 P1 操作爽快感）。
+
+---
+
 ## 13. 合规与风险控制
 
 - **实名 + 防沉迷**：未成年时长/消费限制，到点提醒。
@@ -998,9 +1049,9 @@ generateEquipment(sourceLevel, prof, opts)            // index.html 入口，兼
 | M1 | 原型：单文件 H5、三职业、战斗、词条掉落 | ✅ 已完成 |
 | M2 | 账号系统 + 技能树 + 职业进阶 | ✅ 已完成 |
 | M3 | 装备词条/品质全规则落地 + 音效/美术/打击感/5图多阶段Boss | ✅ 已完成（§4.8/§6.6/§12.7/§12.8/§12.9） |
-| M4 | 强化/附魔/洗练/传承 | 🔜 待开发（本文档 §7） |
-| M5 | 拍卖行/邮件交易/经济平衡 | 🔜 待开发（本文档 §8） |
-| M6 | 留存系统/活动/排行榜 | 🔜 待开发（本文档 §9） |
+| M4 | 强化/附魔/洗练/传承 | 🔶 部分落地（强化 +N 与词缀重铸/洗练已落地；传承待做；本文档 §8 / 实现 §12.11） |
+| M5 | 拍卖行/邮件交易/经济平衡 | 🔶 部分落地（经济闭环已落地；拍卖行 UI 待做；本文档 §9 / 实现 §12.10） |
+| M6 | 留存系统/活动/排行榜 | 🔶 部分落地（周常/成就已落地；排行榜/活动 FOMO 待做；本文档 §10 / 实现 §12.12） |
 | M7 | 微信小游戏转制 + 上线 | 📋 规划中 |
 
 ---
@@ -1024,4 +1075,4 @@ generateEquipment(sourceLevel, prof, opts)            // index.html 入口，兼
 
 ---
 
-*本文档为持续维护的活文档 v1.3。已落地系统：核心战斗 / 装备词条与品质规则（§6.6）/ 背包（§12.6）/ 持久化（§12.2 服务端 SQLite + §12.8 客户端 localStorage）/ 音效（§12.7）/ 5 图多阶段 Boss 与传送阵（§12.8）/ 打击感演出（§4.8）/ 美术视觉升级（§12.9）。§8–§10 强化/附魔/交易/留存 为前瞻设计，按本 GDD 落地即形成完整产品闭环。每次代码/功能变更须同步更新本文件并 bump 版本号（页眉/页脚/changelog 三者一致）。*
+*本文档为持续维护的活文档 v1.4。已落地系统：核心战斗 / 装备词条与品质规则（§6.6）/ 背包（§12.6）/ 持久化（§12.2 服务端 SQLite + §12.8 客户端 localStorage）/ 音效（§12.7）/ 5 图多阶段 Boss 与传送阵（§12.8）/ 打击感演出（§4.8）/ 美术视觉升级（§12.9）/ 经济闭环（§12.10）/ 套装与词缀联动及 NPC 重铸（§12.11）/ 周常成就（§12.12）/ 战斗深化（§12.13）/ 环境危害与四档难度（§12.14）/ 自动化（§12.15）。拍卖行 UI / 公会 / 排行榜 / 转生 / 镶嵌附魔独立 UI / 传承 等为前瞻设计，按本 GDD 落地即形成完整产品闭环。每次代码/功能变更须同步更新本文件并 bump 版本号（页眉/页脚/changelog 三者一致）。*
