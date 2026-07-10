@@ -609,6 +609,32 @@ canvas {
   <div id="ui-layer" style="display:none;">
     <button id="sound-toggle" class="sound-btn" title="音效开关">🔊</button>
     <button id="bp-toggle" class="sound-btn" title="背包 (B)" style="right:54px;" onclick="toggleBackpack()">🎒</button>
+
+    <!-- 自动化控制面板 -->
+    <div id="auto-panel" class="">
+      <div class="auto-header" onclick="toggleAutoPanel()">
+        <span>⚡ 自动化</span><span class="auto-chevron">▾</span>
+      </div>
+      <div id="auto-body">
+        <div class="auto-row">
+          <div class="auto-info"><span class="auto-icon">⚔️</span><span>自动战斗</span></div>
+          <div class="switch" id="sw-combat" onclick="toggleAuto('combat', event)"><div class="knob"></div></div>
+        </div>
+        <div class="auto-hint">手动移动 / 放技能 / 选目标时自动关闭</div>
+
+        <div class="auto-row">
+          <div class="auto-info"><span class="auto-icon">🎒</span><span>自动拾取</span></div>
+          <div class="switch" id="sw-pickup" onclick="toggleAuto('pickup', event)"><div class="knob"></div></div>
+        </div>
+        <div class="auto-sub" id="pickup-quality"></div>
+
+        <div class="auto-row">
+          <div class="auto-info"><span class="auto-icon">✨</span><span>自动技能</span></div>
+          <div class="switch" id="sw-skill" onclick="toggleAuto('skill', event)"><div class="knob"></div></div>
+        </div>
+        <div class="auto-sub" id="skill-list"></div>
+      </div>
+    </div>
     <!-- 顶部状态 -->
     <div id="top-bar">
       <div class="stat-group">
@@ -1153,6 +1179,130 @@ const QUALITY = {
 const QUALITY_LIST = [];
 for (const [k, v] of Object.entries(QUALITY)) {
   for (let i = 0; i < v.dropWeight; i++) QUALITY_LIST.push(k);
+}
+
+// 品质从低到高排序（自动拾取品质过滤用）
+const QUALITY_ORDER = ['common', 'good', 'rare', 'epic', 'legendary', 'mythic'];
+
+// ═══════════ 自动化配置（自动战斗 / 自动拾取 / 自动技能）═══════════
+// combat    : 自动战斗（自动接战+自动攻击），手动操作会临时关闭
+// pickup    : 自动拾取，pickupMinQuality 以下品质忽略
+// skill     : 自动技能，skillList 为 { skillId: priority(1最高) } 选中集合
+const AUTO = {
+  combat: true,
+  pickup: false,
+  pickupMinQuality: 'common',
+  skill: false,
+  skillList: {},
+};
+
+// 手动操作 → 取消自动战斗
+function cancelAutoCombat() {
+  if (AUTO.combat) {
+    AUTO.combat = false;
+    refreshAutoUI();
+    addFloatText(player.x, player.y - player.size * 1.6, '⚔️ 已切换手动', '#f93');
+  }
+}
+
+// ═══════════ 自动化 UI 控制 ═══════════
+function toggleAutoPanel() {
+  const p = document.getElementById('auto-panel');
+  if (p) p.classList.toggle('collapsed');
+}
+
+function toggleAuto(key, ev) {
+  if (ev) ev.stopPropagation();
+  AUTO[key] = !AUTO[key];
+  refreshAutoUI();
+  saveGame();
+}
+
+function setPickupQuality(q) {
+  AUTO.pickupMinQuality = q;
+  renderAutoPickupQuality();
+  refreshAutoUI();
+  saveGame();
+}
+
+function toggleSkillInList(id) {
+  if (AUTO.skillList[id]) {
+    delete AUTO.skillList[id];
+  } else {
+    // 新加入：优先级取 (当前最大+1)，即排在最后
+    let max = 0;
+    for (const k in AUTO.skillList) max = Math.max(max, AUTO.skillList[k]);
+    AUTO.skillList[id] = max + 1;
+  }
+  renderAutoSkillList();
+  refreshAutoUI();
+  saveGame();
+}
+
+// 调整优先级：dir=-1 上移(更小值=更高优先级)，dir=+1 下移
+function moveSkillPriority(id, dir) {
+  const cur = AUTO.skillList[id];
+  if (cur == null) return;
+  // 找出相邻优先级
+  const others = Object.keys(AUTO.skillList).filter(k => k !== id)
+    .sort((a, b) => AUTO.skillList[a] - AUTO.skillList[b]);
+  const sorted = [id, ...others].sort((a, b) => AUTO.skillList[a] - AUTO.skillList[b]);
+  const idx = sorted.indexOf(id);
+  const swapIdx = idx + dir;
+  if (swapIdx < 0 || swapIdx >= sorted.length) return;
+  const other = sorted[swapIdx];
+  const tmp = AUTO.skillList[id];
+  AUTO.skillList[id] = AUTO.skillList[other];
+  AUTO.skillList[other] = tmp;
+  renderAutoSkillList();
+  refreshAutoUI();
+  saveGame();
+}
+
+function renderAutoPickupQuality() {
+  const box = document.getElementById('pickup-quality');
+  if (!box) return;
+  let html = '<div class="auto-sub-label">最低拾取品质（以下忽略）：</div>';
+  for (const q of QUALITY_ORDER) {
+    const qd = QUALITY[q];
+    const active = AUTO.pickupMinQuality === q;
+    html += `<span class="q-chip${active ? ' active' : ''}" style="color:${qd.color};border-color:${active ? qd.color : 'rgba(255,255,255,0.12)'}" onclick="setPickupQuality('${q}')">${qd.name}</span>`;
+  }
+  box.innerHTML = html;
+}
+
+function renderAutoSkillList() {
+  const box = document.getElementById('skill-list');
+  if (!box) return;
+  const skills = SKILL_DEFS[playerProfession] || [];
+  // 按优先级排序展示
+  const ordered = skills.slice().sort((a, b) =>
+    (AUTO.skillList[a.id] || 999) - (AUTO.skillList[b.id] || 999));
+  let html = '<div class="auto-sub-label">勾选技能 · 上方优先释放：</div>';
+  for (const s of ordered) {
+    const sel = !!AUTO.skillList[s.id];
+    const prio = AUTO.skillList[s.id];
+    const upDisabled = !sel || prio === 1;
+    const downDisabled = !sel || prio === Object.keys(AUTO.skillList).length;
+    html += `<div class="skill-auto-row">
+      <input type="checkbox" ${sel ? 'checked' : ''} onchange="toggleSkillInList('${s.id}')">
+      <span class="sa-name" onclick="toggleSkillInList('${s.id}')">${s.icon} ${s.name}</span>
+      <span class="sa-prio${upDisabled ? ' disabled' : ''}" onclick="${upDisabled ? '' : 'moveSkillPriority(\'' + s.id + '\',-1)'}">▲</span>
+      <span class="sa-prio${downDisabled ? ' disabled' : ''}" onclick="${downDisabled ? '' : 'moveSkillPriority(\'' + s.id + '\',1)'}">▼</span>
+    </div>`;
+  }
+  box.innerHTML = html;
+}
+
+// 刷新三个开关的视觉状态
+function refreshAutoUI() {
+  const map = { combat: 'sw-combat', pickup: 'sw-pickup', skill: 'sw-skill' };
+  for (const key in map) {
+    const el = document.getElementById(map[key]);
+    if (el) el.classList.toggle('on', !!AUTO[key]);
+  }
+  renderAutoPickupQuality();
+  renderAutoSkillList();
 }
 
 // 装备槽位
@@ -3155,11 +3305,15 @@ class Player extends Entity {
     
     // 移动
     let dx = 0, dy = 0;
-    if (keys['w'] || keys['arrowup'])    dy = -1;
-    if (keys['s'] || keys['arrowdown'])  dy = 1;
-    if (keys['a'] || keys['arrowleft']) dx = -1;
-    if (keys['d'] || keys['arrowright'])dx = 1;
-    
+    const manualMove = keys['w'] || keys['s'] || keys['a'] || keys['d'] ||
+                       keys['arrowup'] || keys['arrowdown'] || keys['arrowleft'] || keys['arrowright'];
+    if (manualMove) {
+      if (keys['w'] || keys['arrowup'])    dy = -1;
+      if (keys['s'] || keys['arrowdown'])  dy = 1;
+      if (keys['a'] || keys['arrowleft']) dx = -1;
+      if (keys['d'] || keys['arrowright'])dx = 1;
+    }
+
     const len = Math.hypot(dx, dy);
     let tvx = 0, tvy = 0;
     if (len > 0) {
@@ -3168,27 +3322,67 @@ class Player extends Entity {
       this.state = 'walk';
       this.dir = dx !== 0 ? (dx > 0 ? 1 : -1) : this.dir;
     } else {
-      this.state = this.state === 'walk' ? 'idle' : this.state;
+      // 无手动移动：自动接战（ARPG 手感，受 AUTO.combat 开关控制）
+      if (AUTO.combat) {
+      // 关键修复：锁定单一目标(autoTarget)，避免每帧重选“最近敌人”导致速度抖动、原地打转、
+      // 永远贴不近敌人（多怪同距时尤为明显）。锁定后持续追击直至其死亡或超出牵引距离(leash)。
+      const atkRange = this.isPlayer && typeof playerStats !== 'undefined'
+        ? (playerStats.weaponRange || CFG.AUTO_ATTACK_RANGE) : CFG.AUTO_ATTACK_RANGE;
+      // 维持/刷新锁定目标：目标死亡或超出 leash(700px) 才重新选最近
+      if (!this.autoTarget || this.autoTarget.state === 'dead' ||
+          dist(this.x, this.y, this.autoTarget.x, this.autoTarget.y) > 700) {
+        let nd = Infinity, best = null;
+        if (typeof enemies !== 'undefined') {
+          for (const e of enemies) {
+            if (e.state === 'dead') continue;
+            const d = dist(this.x, this.y, e.x, e.y);
+            if (d < nd) { nd = d; best = e; }
+          }
+        }
+        this.autoTarget = best;
+      }
+      const tgt = this.autoTarget;
+      if (tgt) {
+        const td = dist(this.x, this.y, tgt.x, tgt.y);
+        if (td > atkRange * 0.9) {
+          const adx = tgt.x - this.x, ady = tgt.y - this.y;
+          const al = Math.hypot(adx, ady) || 1;
+          tvx = (adx / al) * this.speed * 0.92 * (playerStats.moveSpeedPct || 1);
+          tvy = (ady / al) * this.speed * 0.92 * (playerStats.moveSpeedPct || 1);
+          this.state = 'walk';
+          this.dir = adx !== 0 ? (adx > 0 ? 1 : -1) : this.dir;
+        } else {
+          this.state = this.state === 'walk' ? 'idle' : this.state;
+        }
+        // 进入主循环接战半径后同步给全局 targetEnemy，供 UI/点击逻辑识别
+        if (td <= 320) targetEnemy = tgt;
+      } else {
+        this.state = this.state === 'walk' ? 'idle' : this.state;
+      }
+      }
     }
     // 速度缓动：帧率无关，移动更流畅
     const pa = 1 - Math.exp(-dt * 12);
     this.vx = lerp(this.vx, tvx, pa);
     this.vy = lerp(this.vy, tvy, pa);
-    // 逐轴碰撞滑动
-    const rr = this.size * 0.5;
+    // 逐轴移动：装饰物不阻挡玩家（敌人本就不碰撞），避免自动追击卡墙假死；
+    // 地图边界由下方 clamp 约束。玩家可自由穿过岩石/树木等装饰，保证接战流畅。
     const nx = this.x + this.vx * dt, ny = this.y + this.vy * dt;
-    if (!isSolidAt(nx, this.y, rr)) this.x = nx;
-    if (!isSolidAt(this.x, ny, rr)) this.y = ny;
+    this.x = nx; this.y = ny;
     this.x = clamp(this.x, this.size, CFG.MAP_W - this.size);
     this.y = clamp(this.y, this.size, CFG.MAP_H - this.size);
     
-    // 自动攻击最近敌人（使用武器距离，仅战士受武器类型影响）
-    if (targetEnemy && targetEnemy.state !== 'dead') {
-      const d = dist(this.x, this.y, targetEnemy.x, targetEnemy.y);
+    // 自动攻击：仅 AUTO.combat 开启时由系统接管（优先锁定 autoTarget，其次 targetEnemy）
+    if (AUTO.combat) {
+    const atkTarget = (this.autoTarget && this.autoTarget.state !== 'dead') ? this.autoTarget
+      : (targetEnemy && targetEnemy.state !== 'dead' ? targetEnemy : null);
+    if (atkTarget) {
+      const d = dist(this.x, this.y, atkTarget.x, atkTarget.y);
       const atkRange = this.isPlayer && typeof playerStats !== 'undefined' ? (playerStats.weaponRange || CFG.AUTO_ATTACK_RANGE) : CFG.AUTO_ATTACK_RANGE;
       if (d <= atkRange && this.attackCd <= 0) {
-        this.doAttack(targetEnemy);
+        this.doAttack(atkTarget);
       }
+    }
     }
   }
   
@@ -4696,6 +4890,41 @@ function useSkill(skillId) {
   executeSkill(skill, now);
 }
 
+// 自动技能心跳：遍历勾选技能（按优先级升序），冷却结束且满足条件时释放一个
+function autoSkillTick() {
+  const skills = SKILL_DEFS[playerProfession] || [];
+  const now = Date.now();
+  const selected = skills
+    .filter(s => AUTO.skillList[s.id])
+    .sort((a, b) => (AUTO.skillList[a.id] || 99) - (AUTO.skillList[b.id] || 99));
+  for (const s of selected) {
+    if (skillCDs[s.id] && now < skillCDs[s.id]) continue;        // 冷却中
+    const mpCost = Math.round(s.mpCost * (1 - (playerStats.mpSave || 0)));
+    if (player.mp < mpCost) continue;                            // MP 不足
+    // 攻击/范围类：需有敌人在释放范围内
+    if (s.range > 0 || s.damageMult > 0) {
+      const range = s.range * (1 + (playerStats.skillRange || 0));
+      let has = false;
+      for (const e of enemies) {
+        if (e.state !== 'dead' && dist(player.x, player.y, e.x, e.y) <= range) { has = true; break; }
+      }
+      if (!has) continue;
+    } else if (s.effect === 'heal') {
+      // 治疗类：HP 低于 60% 才释放，避免空耗 MP
+      if (player.hp / player.maxHp > 0.6) continue;
+    } else if (s.effect === 'berserk' || s.effect === 'shield' || s.effect === 'summon') {
+      // 自身增益/召唤：附近有敌人才放，避免空放
+      let has = false;
+      for (const e of enemies) {
+        if (e.state !== 'dead' && dist(player.x, player.y, e.x, e.y) < 320) { has = true; break; }
+      }
+      if (!has) continue;
+    }
+    useSkill(s.id);
+    break; // 每帧最多释放一个技能
+  }
+}
+
 // 技能执行体（由 useSkill 瞬发调用或吟唱完成回调）
 function executeSkill(skill, now) {
   const cnow = performance.now();
@@ -5307,6 +5536,14 @@ function saveGame() {
     cores: window.playerCores || null,
     coreInv: window.playerCoreInv || null,
     archetypeState: window.playerArchetypeState || null,
+    // 自动化配置持久化
+    auto: {
+      combat: AUTO.combat,
+      pickup: AUTO.pickup,
+      pickupMinQuality: AUTO.pickupMinQuality,
+      skill: AUTO.skill,
+      skillList: AUTO.skillList,
+    },
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) {}
   if (typeof Account !== 'undefined') Account.syncProfile();
@@ -5319,6 +5556,14 @@ function loadGame() {
     if (d && Array.isArray(d.clearedMaps)) {
       clearedMaps.clear();
       d.clearedMaps.forEach(i => clearedMaps.add(i));
+    }
+    // 恢复自动化配置
+    if (d.auto) {
+      AUTO.combat = d.auto.combat !== false;
+      AUTO.pickup = !!d.auto.pickup;
+      AUTO.pickupMinQuality = d.auto.pickupMinQuality || 'common';
+      AUTO.skill = !!d.auto.skill;
+      AUTO.skillList = d.auto.skillList || {};
     }
     return d;
   } catch (e) { return null; }
@@ -5519,7 +5764,7 @@ function buildSkillBar() {
       <span class="cd-text" style="display:none;"></span>
     `;
     btn.title = `${skill.name}: ${skill.desc}\nMP: ${skill.mpCost}  CD: ${skill.cd}s`;
-    btn.onclick = () => { Sound.click(); useSkill(skill.id); };
+    btn.onclick = () => { Sound.click(); cancelAutoCombat(); useSkill(skill.id); };
     container.appendChild(btn);
   });
 
@@ -6619,6 +6864,34 @@ function update(dt) {
     }
   }
   
+  // ═══════ 自动拾取（品质过滤）═══════
+  if (AUTO.pickup && player && player.state !== 'dead') {
+    const minRank = QUALITY_ORDER.indexOf(AUTO.pickupMinQuality);
+    for (let i = drops.length - 1; i >= 0; i--) {
+      if (i === window.__pendingDropIdx) continue; // 正在弹拾取面板的跳过
+      const d = drops[i];
+      if (!d || !d.equip) continue;
+      const eq = d.equip;
+      const rank = QUALITY_ORDER.indexOf(eq.quality);
+      if (rank < 0 || rank < minRank) continue; // 低于设定品质 → 忽略，不自动拾取
+      if (dist(player.x, player.y, d.x, d.y) < 64) {
+        if (playerBackpack.length < 20) {
+          playerBackpack.push(eq);
+          if (typeof stats_totalDrops !== 'undefined') stats_totalDrops++;
+          if (typeof stats_dropsByQuality !== 'undefined') stats_dropsByQuality[eq.quality] = (stats_dropsByQuality[eq.quality] || 0) + 1;
+          addFloatText(player.x, player.y - player.size - 18, `🎒 ${eq.qualityName}`, eq.color);
+          drops.splice(i, 1);
+          if (typeof renderBackpack === 'function' && document.getElementById('backpack-panel') && document.getElementById('backpack-panel').style.display === 'block') renderBackpack();
+        }
+      }
+    }
+  }
+  
+  // ═══════ 自动技能释放（按优先级）═══════
+  if (AUTO.skill && player && player.state !== 'dead') {
+    autoSkillTick();
+  }
+  
   // 相机跟随
   if (player) {
     const tx = clamp(player.x - gameWidth / 2, 0, Math.max(0, CFG.MAP_W - gameWidth));
@@ -7010,6 +7283,13 @@ function setupInput() {
     if (!e || typeof e.key !== 'string') return;
     keys[e.key.toLowerCase()] = true;
 
+    // 手动移动 → 取消自动战斗
+    const k = e.key.toLowerCase();
+    if (k === 'w' || k === 'a' || k === 's' || k === 'd' ||
+        k === 'arrowup' || k === 'arrowdown' || k === 'arrowleft' || k === 'arrowright') {
+      cancelAutoCombat();
+    }
+
     // F 键：与邻近 NPC 对话（不响应系统自动重复）
     if (e.key.toLowerCase() === 'f' && !e.repeat && player && player.state !== 'dead') {
       if (typeof Quest !== 'undefined') Quest.interact();
@@ -7038,6 +7318,7 @@ function setupInput() {
 
     // 数字键释放技能
     if (e.key >= '1' && e.key <= '5') {
+      cancelAutoCombat(); // 手动释放技能 → 取消自动战斗
       const skills = SKILL_DEFS[playerProfession] || [];
       const idx = parseInt(e.key) - 1;
       if (skills[idx]) useSkill(skills[idx].id);
@@ -7045,6 +7326,7 @@ function setupInput() {
 
     // R 键：终极技（技能树 combat_t6）
     if (e.key.toLowerCase() === 'r' && !e.repeat && player && player.state !== 'dead') {
+      cancelAutoCombat(); // 手动释放终极技 → 取消自动战斗
       useUltimate();
     }
   });
@@ -7084,6 +7366,7 @@ function setupInput() {
       }
       if (nearest) {
         targetEnemy = nearest;
+        cancelAutoCombat(); // 手动选择目标 → 取消自动战斗
         // 检查攻击距离（战士受武器类型影响）
         const clickAtkRange = playerStats && playerStats.weaponRange ? playerStats.weaponRange : CFG.AUTO_ATTACK_RANGE;
         const dToTarget = dist(player.x, player.y, nearest.x, nearest.y);
@@ -7198,6 +7481,7 @@ function selectProfession(prof) {
   buildSkillBar();
   buildEquipBar();
   updateTopBarUI();
+  refreshAutoUI();   // 初始化自动化开关 UI 状态
   
   // 开始游戏
   gameRunning = true;
@@ -7385,6 +7669,10 @@ window.__game = {
   get mapCount() { return MAP_DEFS.length; },
   get bossShots() { return bossShots.length; },
   get mapTransition() { return mapTransition.active; },
+  get AUTO() { return AUTO; },
+  get drops() { return drops; },
+  get playerBackpack() { return playerBackpack; },
+  get skillCDs() { return skillCDs; },
   get activeBoss() {
     const b = enemies.find(e => e.isBoss && e.state !== 'dead');
     return b ? { name: b.name, phase: b.bossPhase, phases: b.phases ? b.phases.length : 0, hp: Math.round(b.hp), maxHp: b.maxHp } : null;
