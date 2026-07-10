@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>传奇 - 装备词条</title>
+<link rel="icon" href="data:,">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -1105,6 +1106,7 @@ canvas {
 <script src="env.js"></script>
 <script src="sets.js"></script>
 <script src="affix_synergy.js"></script>
+<script src="equip-rules.js"></script>
 <script src="quest.js"></script>
 <script src="archetype.js"></script>
 <script src="account.js"></script>
@@ -1183,24 +1185,33 @@ const BAL = {
   REWARD_SCALE: 7,
 };
 
-// 品质配置
-const QUALITY = {
-  common:   { name: '普通', color: '#aaaaaa', glow: null,       affixMin: 1, affixMax: 1, dropWeight: 600 },
-  good:     { name: '优秀', color: '#44ff00', glow: null,       affixMin: 1, affixMax: 2, dropWeight: 250 },
-  rare:     { name: '稀有', color: '#00aaff', glow: '#02a',     affixMin: 2, affixMax: 3, dropWeight: 100 },
-  epic:     { name: '史诗', color: '#aa00ff', glow: '#a0a',     affixMin: 2, affixMax: 3, dropWeight: 38 },
-  legendary:{ name: '传说', color: '#ff8800', glow: '#f80',     affixMin: 3, affixMax: 4, dropWeight: 10 },
-  mythic:   { name: '神话', color: '#ff0044', glow: '#f04',     affixMin: 3, affixMax: 4, dropWeight: 2 },
-};
+// 品质配置（配置驱动：由 equip-rules.js 的 EquipRules.config 填充，启动时 applyConfigToGlobals() 生效）
+let QUALITY = {};
+let QUALITY_LIST = [];
+let QUALITY_ORDER = ['common', 'good', 'rare', 'epic', 'legendary', 'mythic'];
 
-// 品质列表（按权重随机）
-const QUALITY_LIST = [];
-for (const [k, v] of Object.entries(QUALITY)) {
-  for (let i = 0; i < v.dropWeight; i++) QUALITY_LIST.push(k);
+// 由 EquipRules 配置重建全局品质/词条表，使现有 UI 与属性结算与配置保持一致（支持热更新）
+function applyConfigToGlobals() {
+  const er = (typeof EquipRules !== 'undefined') ? EquipRules : null;
+  const cfg = er && er.config;
+  if (!cfg) return;
+  QUALITY = {};
+  QUALITY_ORDER = cfg.qualityOrder.slice();
+  QUALITY_LIST = [];
+  cfg.qualityOrder.forEach(function (q) {
+    const qd = cfg.qualities[q];
+    if (!qd) return;
+    QUALITY[q] = {
+      name: qd.name, color: qd.color, glow: qd.tier > 1 ? qd.color : null,
+      affixMin: qd.affixMin, affixMax: qd.affixMax, dropWeight: qd.dropWeight, mult: qd.mult, tier: qd.tier
+    };
+    for (let i = 0; i < qd.dropWeight; i++) QUALITY_LIST.push(q);
+  });
+  AFFIX_DB = cfg.affixes.map(function (a) {
+    return Object.assign({}, a, { type: a.attr, cat: a.tier === 'basic' ? 'A' : (a.tier === 'rare' ? 'B' : 'C') });
+  });
+  if (typeof console !== 'undefined') console.log('[EquipRules] 全局品质/词条表已同步 (v' + cfg.version + ')');
 }
-
-// 品质从低到高排序（自动拾取品质过滤用）
-const QUALITY_ORDER = ['common', 'good', 'rare', 'epic', 'legendary', 'mythic'];
 
 // ═══════════ 自动化配置（自动战斗 / 自动拾取 / 自动技能）═══════════
 // combat    : 自动战斗（自动接战+自动攻击），手动操作会临时关闭
@@ -1369,8 +1380,8 @@ const SKILL_DEFS = {
   ],
 };
 
-// 词条数据库（精简核心版，67条完整版见 equipment_affix_db.json）
-const AFFIX_DB = [
+// 词条数据库（运行时由 EquipRules.config 在 applyConfigToGlobals() 中重建；此处保留作离线兜底常量）
+let AFFIX_DB = [
   // A类 基础属性
   { id:'A01', cat:'A', name:'攻击力+',         type:'atk',     base:[5,15],    qualityScale:true },
   { id:'A02', cat:'A', name:'魔法攻击+',       type:'matk',    base:[5,15],    qualityScale:true },
@@ -1569,17 +1580,10 @@ function weightedRandom(weightMap) {
   return Object.keys(weightMap)[0];
 }
 
-// 品质倍率
+// 品质倍率（配置驱动：读取 QUALITY[q].mult）
 function getQualityMultiplier(q) {
-  switch(q) {
-    case 'common': return 1.0;
-    case 'good': return 1.3;
-    case 'rare': return 1.7;
-    case 'epic': return 2.2;
-    case 'legendary': return 3.0;
-    case 'mythic': return 5.0;
-    default: return 1.0;
-  }
+  const qd = (typeof QUALITY !== 'undefined' && QUALITY[q]) ? QUALITY[q] : null;
+  return qd && qd.mult ? qd.mult : 1.0;
 }
 
 // 生成装备名
@@ -1611,62 +1615,66 @@ function generateEquipName(slotKey, quality) {
   return prefix + baseName + suffix;
 }
 
-// 生成一件装备
-function generateEquipment(sourceLevel) {
-  const slotDef = pick(SLOT_DEFS);
-  const slotKey = slotDef.key;
-  const qualRoll = pick(QUALITY_LIST);
-  const q = QUALITY[qualRoll];
-  
-  const affixCount = randInt(q.affixMin, q.affixMax);
-  const mult = getQualityMultiplier(qualRoll);
-  // 装备随掉落等级成长：让后期装备相对前期有合理的属性提升空间
-  const levelScale = 1 + Math.max(1, sourceLevel || 1) * BAL.EQUIP_LEVEL_SCALE;
-  const affixes = [];
-  // 套装联动：约 42% 装备归属某一套装（集齐 2/4 件触发增益，打通构筑闭环）
-  let set = null;
-  if (typeof Sets !== 'undefined') set = Sets.rollSetForEquip(0.42);
-  const usedTypes = new Set();
-  
-  for (let i = 0; i < affixCount; i++) {
-    // 过滤已用类型和职业不匹配的
-    let pool = AFFIX_DB.filter(a => !usedTypes.has(a.type));
-    if (pool.length === 0) { usedTypes.clear(); pool = AFFIX_DB; }
-    const affix = pick(pool);
-    usedTypes.add(affix.type);
-    
-    let valueStr = '';
-    if (affix.base) {
-      const v = Math.round((rand(affix.base[0], affix.base[1])) * BAL.REWARD_SCALE * mult * levelScale);
-      valueStr = v.toString();
-    } else if (affix.val !== undefined) {
-      if (Array.isArray(affix.val)) {
-        valueStr = (Math.round(affix.val[0] * BAL.REWARD_SCALE * mult * levelScale * 100) / 100).toString();
-      } else {
-        valueStr = Math.round(affix.val * BAL.REWARD_SCALE * 100) + '%';
-      }
-    } else {
-      valueStr = '';
+// 生成一件装备（配置驱动：词条/品质/评分全由 EquipRules 引擎计算）
+// 签名：generateEquipment(sourceLevel, prof, opts?)  —— opts.slotKey 可强制槽位（兼容旧调用）
+function generateEquipment(sourceLevel, prof, opts) {
+  opts = opts || {};
+  const er = (typeof EquipRules !== 'undefined') ? EquipRules : null;
+  // 兼容旧调用：首个参数若误传字符串(槽位)则转强制槽位，等级取 playerLevel
+  let forcedSlot = opts.slotKey || null;
+  let lvl = sourceLevel;
+  if (typeof sourceLevel === 'string') { forcedSlot = sourceLevel; lvl = playerLevel || 1; }
+  lvl = (typeof lvl === 'number' && isFinite(lvl)) ? lvl : (playerLevel || 1);
+  const p = (typeof prof === 'string') ? prof : (playerProfession || null);
+
+  const slotDef = forcedSlot ? (SLOT_DEFS.find(s => s.key === forcedSlot) || pick(SLOT_DEFS)) : pick(SLOT_DEFS);
+
+  let quality, affixes, score;
+  if (er) {
+    const r = er.generateEquip({ sourceLevel: lvl, prof: p });
+    quality = r.quality; affixes = r.affixes; score = r.score;
+  } else {
+    // 兜底：EquipRules 未加载时退回旧内联逻辑
+    const qk = (QUALITY_LIST && QUALITY_LIST.length) ? pick(QUALITY_LIST) : 'common';
+    quality = qk;
+    const q = QUALITY[qk] || { affixMin: 1, affixMax: 1, mult: 1 };
+    const cnt = randInt(q.affixMin || 1, q.affixMax || 1);
+    affixes = []; const used = new Set();
+    for (let i = 0; i < cnt; i++) {
+      let pool = AFFIX_DB.filter(a => !used.has(a.type));
+      if (!pool.length) { used.clear(); pool = AFFIX_DB; }
+      const a = pick(pool); used.add(a.type);
+      affixes.push(Object.assign({}, a, { type: a.attr, displayValue: String(a.base ? Math.round(rand(a.base[0], a.base[1])) : 0) }));
     }
-    affixes.push({ ...affix, displayValue: valueStr });
+    score = 0;
   }
-  
+
+  const q = QUALITY[quality] || { name: quality, color: '#fff', mult: 1 };
+  const mult = q.mult || 1;
+  const levelScale = 1 + Math.max(1, lvl) * BAL.EQUIP_LEVEL_SCALE;
+  // 套装联动：约 42% 装备归属某一套装（集齐 2/4 件触发增益，打通构筑闭环）
+  const set = (typeof Sets !== 'undefined') ? Sets.rollSetForEquip(0.42) : null;
+
   return {
-    uid: Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-    slotKey,
+    uid: 'e' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+    slotKey: slotDef.key,
     slotName: slotDef.name,
-    name: generateEquipName(slotKey, qualRoll),
-    quality: qualRoll,
+    name: generateEquipName(slotDef.key, quality),
+    quality: quality,
     qualityName: q.name,
     color: q.color,
-    affixes,
-    set,
+    affixes: affixes,
+    affixLocks: affixes.map(() => false),
+    set: set,
     dura: 100, duraMax: 100, // 耐久（经济 sink：磨损→修理费；归零该件失效）
     baseAtk: randInt(1, Math.round(10 * mult * levelScale)),
     baseDef: randInt(0, Math.round(5 * mult * levelScale)),
     // 武器类型（仅 weapon 槽有效，影响战士攻击距离）
-    weaponType: slotKey === 'weapon' ? (pick(WARRIOR_WEAPONS)) : null,
+    weaponType: slotDef.key === 'weapon' ? (pick(WARRIOR_WEAPONS)) : null,
     enhanceLevel: 0,
+    score: score,
+    rulesVersion: (er && er.config) ? er.config.version : 0,
+    _sourceLevel: lvl, _prof: p,
   };
 }
 
@@ -3254,7 +3262,7 @@ class Entity {
         this.destroyedPartReward = (this.destroyedPartReward || 0) + 1;
         // 部位破坏额外掉落
         if (Math.random() < 0.4) {
-          const drop = generateEquipment(playerLevel, 1, 1);
+          const drop = generateEquipment(playerLevel);
           if (drop) { drops.push({ x: this.x + rand(-30, 30), y: this.y + rand(-20, 20), equip: drop, timer: 6 }); }
         }
       }
@@ -3905,7 +3913,7 @@ class Enemy extends Entity {
       addFloatText(this.x, this.y - this.size - 40, '🎉 惊喜掉落! +' + surpriseGold + '金 +' + surpriseToken + '代币', '#ffd700');
       // 额外装备
       if (Math.random() < 0.5) {
-        const eq = generateEquipment(pick(['weapon','armor','necklace','ring','boots','helmet','belt','bracer','wing']), Math.round(playerLevel * rand(0.8, 1.2)));
+        const eq = generateEquipment(Math.round(playerLevel * rand(0.8, 1.2)), playerProfession, { slotKey: pick(['weapon','armor','necklace','ring','boots','helmet','belt','bracer','wing']) });
         drops.push({ x: this.x, y: this.y, equip: eq, lifeTime: 30 });
         addFloatText(this.x, this.y - this.size - 60, `✨ ${eq.qualityName} ${eq.slotName}!`, eq.color);
       }
@@ -6749,38 +6757,25 @@ function drawEnvObjects(ctx, camX, camY) {
   }
 }
 
-// 词缀重掷生成器（注入 NPCShop.applyReforge）：复刻 generateEquipment 的词缀规则，
-// 使用当前 playerLevel 做等级缩放，使重铸词缀随成长保持相关。
+// 词缀重掷生成器（注入 NPCShop.applyReforge）：配置驱动，复用 EquipRules 冲突/锁定/职业规则
 function rollAffixesForReforge(eq, count, rng) {
-  count = count || 0;
-  const qualRoll = eq.quality || 'common';
-  const q = QUALITY[qualRoll] || QUALITY.common;
-  const mult = getQualityMultiplier(qualRoll);
+  count = count || (eq.affixes ? eq.affixes.length : 0);
   const sourceLevel = playerLevel || 1;
-  const levelScale = 1 + Math.max(1, sourceLevel) * BAL.EQUIP_LEVEL_SCALE;
-  const usedTypes = new Set();
-  const affixes = [];
+  const prof = playerProfession || null;
+  if (!eq.affixLocks) eq.affixLocks = (eq.affixes || []).map(function () { return false; });
+  eq._sourceLevel = sourceLevel; eq._prof = prof;
+  const er = (typeof EquipRules !== 'undefined') ? EquipRules : null;
+  if (!er || !eq.affixes) return eq.affixes ? eq.affixes.slice(0, count) : [];
+  const result = [];
   for (let i = 0; i < count; i++) {
-    let pool = AFFIX_DB.filter(a => !usedTypes.has(a.type));
-    if (pool.length === 0) { usedTypes.clear(); pool = AFFIX_DB; }
-    const affix = pick(pool);
-    usedTypes.add(affix.type);
-    let valueStr = '';
-    if (affix.base) {
-      const v = Math.round((rand(affix.base[0], affix.base[1])) * BAL.REWARD_SCALE * mult * levelScale);
-      valueStr = v.toString();
-    } else if (affix.val !== undefined) {
-      if (Array.isArray(affix.val)) {
-        valueStr = (Math.round(affix.val[0] * BAL.REWARD_SCALE * mult * levelScale * 100) / 100).toString();
-      } else {
-        valueStr = Math.round(affix.val * BAL.REWARD_SCALE * 100) + '%';
-      }
-    } else {
-      valueStr = '';
-    }
-    affixes.push({ ...affix, displayValue: valueStr });
+    if (eq.affixes[i] && eq.affixLocks[i]) { result.push(eq.affixes[i]); continue; } // 锁定词条保留
+    const res = er.replaceAffix(eq, i, { sourceLevel: sourceLevel, prof: prof });
+    if (res.ok) result.push(eq.affixes[i]);
+    else if (eq.affixes[i]) result.push(eq.affixes[i]);
   }
-  return affixes;
+  eq.affixes = result;
+  eq.score = er.scoreAffixes(eq.affixes);
+  return result;
 }
 
 // 词缀重铸（消耗侧闭环）：从背包或已穿戴中定位装备，调用 NPCShop 纯逻辑执行
@@ -8099,6 +8094,9 @@ window.__game = {
   get drops() { return drops; },
   get playerBackpack() { return playerBackpack; },
   get playerEquipment() { return playerEquipment; },
+  get rules() { return (typeof EquipRules !== 'undefined' && EquipRules.config) ? EquipRules.config : null; },
+  reloadRules() { if (typeof EquipRules === 'undefined') return 'no-engine'; return EquipRules.reload().then(applyConfigToGlobals).then(function () { return 'ok'; }).catch(function (e) { return 'err:' + (e && e.message); }); },
+  makeEquip(n) { const out = []; const c = n || 1; for (let i = 0; i < c; i++) out.push(generateEquipment(playerLevel || 1)); return out; },
   get skillCDs() { return skillCDs; },
   get activeBoss() {
     const b = enemies.find(e => e.isBoss && e.state !== 'dead');
@@ -8129,6 +8127,14 @@ window.__dbg = {
   forceExit() { if (currentMapIndex < MAP_DEFS.length - 1) { startTransition(currentMapIndex + 1); return 'transition'; } return 'last-map'; },
   gotoExit() { const m = curMap(); if (m.exit) { player.x = m.exit.x * CFG.MAP_W; player.y = m.exit.y * CFG.MAP_H; } },
 };
+
+// 装备规则引擎配置加载（配置驱动 / 支持热更新；远程失败回退内置默认）
+applyConfigToGlobals();
+if (typeof EquipRules !== 'undefined') {
+  EquipRules.loadFromURL('/equip-rules.json').then(applyConfigToGlobals).catch(function (e) {
+    console.warn('[EquipRules] 远程规则加载失败，使用内置默认配置:', e && e.message);
+  });
+}
 
 // 启动
 init();

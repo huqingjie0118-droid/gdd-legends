@@ -181,6 +181,19 @@ const server = http.createServer(async (req, res) => {
       db.deleteSave(slot);
       return sendJSON(res, 200, { ok: true });
     }
+    // 装备规则配置（配置驱动：前端 EquipRules 引擎热加载此文件）
+    if (p === '/api/equip-rules' && req.method === 'GET') {
+      const fp = path.join(PUBLIC_DIR, 'equip-rules.json');
+      return fs.readFile(fp, 'utf8', (err, data) => {
+        if (err) return sendJSON(res, 500, { ok: false, error: '规则文件缺失: ' + err.message });
+        try {
+          const cfg = JSON.parse(data);
+          return sendJSON(res, 200, Object.assign({ ok: true }, cfg));
+        } catch (e) {
+          return sendJSON(res, 500, { ok: false, error: '规则 JSON 解析失败: ' + e.message });
+        }
+      });
+    }
 
     // 静态资源
     return serveStatic(res, p);

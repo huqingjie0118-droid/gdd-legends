@@ -14,6 +14,7 @@
 | v1.0 | 2026-07 | 主策 + 技术美术 | 本文档：补全装备词条/品质/附魔强化/交易经济/留存全链路设计 |
 | v1.1 | 2026-07 | 主策 | 回填已上线系统：背包系统（分类/堆叠/拖拽/装备↔背包双向）、服务端 SQLite 持久化；§4.4 技能表、§6.1 槽位、§7.1 品质权重、§15.4 职业数值对齐 `index.html` 实值 |
 | v1.1.1 | 2026-07 | 主策 | 战斗平衡与渲染修复：敌人数硬上限（普通刷怪软上限 20 / 含 Boss 召唤总硬上限 22，根治真机观测到的 20→28 溢出）；自动接战新增群压求生（≥4 怪贴脸风筝后退）；修复消耗品/材料掉落渲染 `d.equip.color` 空指针崩溃 |
+| v1.2 | 2026-07 | 主策 + 系统策划 | 装备词条与品质规则系统落地：新增 `equip-rules.json`（v2，47 词条 / 6 品质，数据驱动）+ `equip-rules.js`（UMD 规则引擎，生成/评分/动态评定/升阶/校验）；实现词条三层稀有度、品质→词条层概率联动、评分算法与品质动态评定（生成只升不降、替换允许降级）、锁定/替换、升阶（材料×档序 + 成功率 clamp）；全量校验 + 环形日志；热更新 `reloadRules()` 与 `/api/equip-rules` 路由；§6.6 补实现文档 |
 
 ---
 
@@ -531,6 +532,131 @@ function rollAffixes(itemLevel, quality):
 - Boss 提升品质概率与固定词条数量（见 §6.1）。
 - 已实现：词条掉落、品质分档音效（普通叮→传说嗡→神话全服通告）。
 
+### 6.6 配置驱动规则引擎（实现：equip-rules.json + equip-rules.js）
+
+> 用户需求 #3（规则联动）、#4（配置驱动/热更新）、#5（边界处理）的落地实现。所有词条池、品质参数、概率权重、评分规则均由 `equip-rules.json` 单一配置文件驱动，代码层 `equip-rules.js` 为纯逻辑 UMD 引擎（浏览器 `window.EquipRules` / Node `require` 双模式），**无需改代码即可调整规则**。
+
+#### 6.6.1 文件结构与加载流程
+
+| 文件 | 角色 | 大小/版本 |
+|------|------|----------|
+| `equip-rules.json` | 规则数据源（词条池 / 品质 / 权重 / 评分 / 升阶） | v2，47 词条 / 6 品质 |
+| `equip-rules.js` | 规则引擎（生成/评分/评定/升阶/校验），UMD 双模式 | 内置 `DEFAULT_CONFIG` 离线兜底 |
+
+加载链路（游戏启动）：
+```
+index.html init()
+  ├─ applyConfigToGlobals()                      // 用当前 EquipRules.config 重建 QUALITY / QUALITY_LIST / AFFIX_DB 映射
+  └─ EquipRules.loadFromURL('/equip-rules.json') // 拉取线上配置 → init(cfg)
+         .then(applyConfigToGlobals)             // 配置生效后再同步全局
+```
+- **热更新**：运行时调用 `window.__game.reloadRules()` → `EquipRules.reload()`（复用 `lastUrl`）→ 重新拉取并 `applyConfigToGlobals()`，无需刷新页面。
+- **离线兜底**：`equip-rules.js` 加载即用 `DEFAULT_CONFIG` 初始化；`loadFromURL` 失败仅告警，保持旧配置，绝不崩溃。
+- **后端**：`server/index.js` 新增 `GET /api/equip-rules`（读取 `equip-rules.json` 返回），同时静态托管 `equip-rules.json`，双通道可用。
+
+#### 6.6.2 词条三层稀有度与评分权重
+
+词条按 `tier` 分三级，决定基础评分权重 `score`：
+
+| tier | 含义 | 评分权重 `score` | 示例 |
+|------|------|-----------------|------|
+| basic | 基础属性词条（力量/生命/防御…） | 低（约 5~12） | A01 力量 + |
+| rare | 稀有词条（战斗特效/特殊数值） | 中（约 20~40） | B/C/D 系列 |
+| legendary | 传奇词条（特殊机制，如复活/反伤/穿透） | 高（约 50~90 + 特殊加成） | F01~F04 |
+
+#### 6.6.3 品质 → 词条层概率联动（qualityAffixTierWeights）
+
+每档品质配一组三层权重，roll 词条时先按该权重选层、再在层内按 `weight` 选具体词条。**高品质显著拉高高稀有度词条概率**：
+
+| 品质 | basic | rare | legendary |
+|------|-------|------|-----------|
+| common | 100 | 0 | 0 |
+| good | 80 | 20 | 0 |
+| rare | 55 | 40 | 5 |
+| epic | 35 | 50 | 15 |
+| legendary | 15 | 55 | 30 |
+| mythic | 0 | 35 | 65 |
+
+> 这直接满足"高品质→高稀有度词条概率提升"。数值集中在 `equip-rules.json` 的 `qualityAffixTierWeights`，策划可随时调。
+
+#### 6.6.4 评分算法与动态品质评定
+
+**单词条分**：
+```
+tierScore = affix.tier 对应的基础分
+norm      = (value - rawMin) / (rawMax - rawMin)        // 该条在其区间内归一到 0~1
+single    = tierScore × (0.4 + valueWeight × norm)      // valueWeight 由 scoring.valueWeightNorm 控制
+special 类额外 + scoring.specialBonus
+```
+**总评分** = 所有词条 `single` 之和。`generateEquipment` 输出携带 `score` 字段。
+
+**动态品质评定** `judgeQuality(rolledQuality, score, allowDowngrade)`：
+- 取 `qualityScoreThresholds`：common 0 / good 25 / rare 60 / epic 110 / legendary 200 / mythic 320。
+- 计算 `jt` = 评分应处档位，`rt` = 掉落 roll 出的档位。
+- 生成时 `allowDowngrade=false`：**只升不降**（评分超阈值则晋级到对应品质，如 rare 评分≥200 → 晋级 legendary），制造"欧皇翻盘"惊喜（探针实测 rare 有约 15%~20% 被晋级）。
+- 替换词条时 `allowDowngrade=true`：评分跌破当前档阈值则**允许降级一档**，保证词条与品质始终自洽。
+
+实测随机生成 5000 件，平均评分随品质单调递增：common≈7 / good≈16 / rare≈60 / epic≈109 / legendary≈258 / mythic≈387。
+
+#### 6.6.5 生成管线（generateEquip 委托链）
+
+```
+generateEquipment(sourceLevel, prof, opts)            // index.html 入口，兼容旧调用（slotKey/affixLocks 透传）
+   └─ EquipRules.generateEquip({qualityOverride|roll, sourceLevel, prof})
+        1. rollQuality() 或 qualityOverride            // 先定品质
+        2. rollAffixes(quality, sourceLevel, prof)      // 按 qualityAffixTierWeights 选层 → 层内按 weight 选词条
+             · 写入 blocked[attr] + 遍历 conflicts 做互斥检测，同 attr 不重复
+             · prof 过滤（职业专属词条）
+             · 溢出保护：尝试上限 count*20+50 次，池耗尽优雅停止（日志提示）
+        3. computeValue(affix, quality, sourceLevel)    // value = roll(min,max) × 品质倍率(qualityScale) × 等级缩放(levelScale)
+             · kind=flat 显示 "+N"；kind=pct 显示 "+X%"；kind=special 显示名称
+        4. toAffixOut() → 统一输出 {id,tier,attr,name,kind,type,displayValue,display,score,...}
+        5. scoreAffixes() → 总评分
+        6. judgeQuality(rolled, score, false) → 最终 quality（动态晋级）
+```
+消费契约（供 `calcPlayerStats` / 背包渲染）：只读 `af.type` + `af.displayValue`（数值字符串），`kind` ∈ {flat,pct,special}；背包渲染用 `af.display`。
+
+#### 6.6.6 锁定 / 替换机制
+
+- `lockAffix(equip, index)`：切换某词条锁定态；锁定的词条在重铸/替换/升阶加词时**始终保留**。
+- `replaceAffix(equip, index, opts)`：基于现有词条构建可用池（排除自身 + blocked 同 attr + conflicts + 职业不符），加权随机重选；重算 `score` 并 `judgeQuality(..., true)` 重评定（允许降级）。池为空时安全失败，保留原词条并记日志。
+- 重铸系统 `rollAffixesForReforge` 复用 `replaceAffix`，锁定词条不被洗掉。
+
+#### 6.6.7 升阶系统（材料消耗 + 成功率）
+
+升阶把装备提升一档品质，并可能追加词条 / 重算数值：
+
+| 参数（equip-rules.json → upgrade） | 值 | 说明 |
+|-----------------------------------|-----|------|
+| materials | iron_ore:2, monster_core:1 | 基础消耗 |
+| successBase / decay / min / max | 0.65 / 0.10 / 0.10 / 0.95 | 成功率 = clamp(successBase − decay×当前档序, min, max) |
+| 材料消耗 | materials × (tier+1) | 越往上越贵 |
+
+- `canUpgrade(equip)`：存在下一档品质才允许。
+- `upgradeCost(equip)`：返回本次升阶材料清单。
+- `upgradeSuccessRate(equip)`：返回本次成功率（已 clamp）。
+- `upgradeEquip(equip, materials)`：校验材料充足 → 扣材料 → `Math.random()<rate` 决定成败；成功则 `quality` 提升 + 词条数值重 roll（含品质/等级缩放）+ 按新品质上限可能追加一条词条；失败则品质不变（材料已扣，符合"沉没成本"设计）。
+
+#### 6.6.8 边界处理与参数校验
+
+引擎 `validate(cfg)` 全量校验，覆盖：
+- 品质缺失 / 未知品质引用 / `qualityScoreThresholds` 与 `qualities` 不一致 → 返回 `ok:false` 并**保留旧配置**不崩溃。
+- `rollAffixes` 溢出保护：尝试次数上限 `count*20+50`，池耗尽立即停止（日志 `可用词条池耗尽`）。
+- `affixMax > 词池总数`：按池大小封顶，不死循环。
+- 空词条池：`generateEquip` 返回 0 词条而不报错。
+- 词条层权重全 0：回退到 `rollQuality` 默认 common。
+- 日志：`log(level,msg)` 环形缓冲 200 条 + `console` 输出，所有异常路径可观测（满足"完整错误日志输出"）。
+
+#### 6.6.9 扩展指南（数据驱动，零代码改动）
+
+调整任何规则只需改 `equip-rules.json` 并触发热加载（`__game.reloadRules()` 或刷新）：
+- 调掉率 → 改 `qualities[*].dropWeight`
+- 调某品质"多高稀" → 改 `qualityAffixTierWeights`
+- 加新词条 → 在 `affixes` 追加一条（填 id/tier/attr/kind/min/max/weight/score/conflicts?/prof?）
+- 调评分曲线 → 改 `scoring`（specialBonus / valueWeightNorm）或各 tier 的 `score`
+- 调品质阈值 → 改 `qualityScoreThresholds`
+- 调升阶 → 改 `upgrade`（materials / successBase / decay / min / max）
+
 ---
 
 ## 7. 装备品质与词条组合规则
@@ -578,6 +704,8 @@ function rollAffixes(itemLevel, quality):
 - 同一装备上 **不可出现两条同名词条**。
 - 互斥对示例：`吸血` 与 `反伤` 不可同件；`纯攻`前缀与`纯防`后缀无互斥（鼓励攻防兼备）。
 - 主属性词条（武器攻击）与随机"攻击+"可共存，叠加生效。
+
+> 去重/互斥的实现与校验见 §6.6.5（生成管线冲突检测）与 §6.6.8（边界处理）；升阶（材料/成功率）实现见 §6.6.7。
 
 ---
 

@@ -1,0 +1,112 @@
+{
+  "version": 2,
+  "description": "传奇·觉醒 — 装备词条与品质规则配置（配置驱动 / 支持热更新）。修改本文件无需改动代码即可调整全部掉落规则。",
+  "scaling": {
+    "levelScalePerLevel": 0.07,
+    "qualityAppliesTo": ["flat", "pct"],
+    "levelAppliesTo": ["flat", "pct"],
+    "note": "最终数值 = roll(min,max) × (品质倍率? 若该kind在 qualityAppliesTo) × (等级缩放? 若该kind在 levelAppliesTo)。special 类不参与缩放。"
+  },
+  "qualityOrder": ["common", "good", "rare", "epic", "legendary", "mythic"],
+  "qualities": {
+    "common":    { "name": "普通", "color": "#aaaaaa", "tier": 0, "mult": 1.0, "affixMin": 1, "affixMax": 1, "dropWeight": 600 },
+    "good":      { "name": "优秀", "color": "#44ff00", "tier": 1, "mult": 1.3, "affixMin": 1, "affixMax": 2, "dropWeight": 250 },
+    "rare":      { "name": "稀有", "color": "#00aaff", "tier": 2, "mult": 1.7, "affixMin": 2, "affixMax": 3, "dropWeight": 100 },
+    "epic":      { "name": "史诗", "color": "#aa00ff", "tier": 3, "mult": 2.2, "affixMin": 2, "affixMax": 3, "dropWeight": 38 },
+    "legendary": { "name": "传说", "color": "#ff8800", "tier": 4, "mult": 3.0, "affixMin": 3, "affixMax": 4, "dropWeight": 10 },
+    "mythic":    { "name": "神话", "color": "#ff0044", "tier": 5, "mult": 5.0, "affixMin": 3, "affixMax": 4, "dropWeight": 2 }
+  },
+  "affixTiers": {
+    "basic":     { "name": "基础词条", "score": 10 },
+    "rare":      { "name": "稀有词条", "score": 45 },
+    "legendary": { "name": "传奇词条", "score": 120 }
+  },
+  "qualityAffixTierWeights": {
+    "common":    { "basic": 100, "rare": 0,  "legendary": 0 },
+    "good":      { "basic": 90,  "rare": 10, "legendary": 0 },
+    "rare":      { "basic": 65,  "rare": 32, "legendary": 3 },
+    "epic":      { "basic": 40,  "rare": 48, "legendary": 12 },
+    "legendary": { "basic": 15,  "rare": 50, "legendary": 35 },
+    "mythic":    { "basic": 0,   "rare": 35, "legendary": 65 }
+  },
+  "scoring": {
+    "valueWeight": 0.6,
+    "specialBonus": 30,
+    "note": "单词条分 = 层基础分 × (0.4 + valueWeight × 归一化数值[0..1])；special 类加 specialBonus。装备总评分 = 各词条分之和，用于动态品质评定。"
+  },
+  "qualityScoreThresholds": [
+    { "quality": "common",    "min": 0 },
+    { "quality": "good",      "min": 25 },
+    { "quality": "rare",      "min": 60 },
+    { "quality": "epic",      "min": 110 },
+    { "quality": "legendary", "min": 200 },
+    { "quality": "mythic",    "min": 320 }
+  ],
+  "upgrade": {
+    "materials": { "iron_ore": 2, "monster_core": 1 },
+    "materialScalePerTier": 1,
+    "successBase": 0.65,
+    "successDecayPerTier": 0.10,
+    "minSuccess": 0.10,
+    "maxSuccess": 0.95,
+    "addAffixOnSuccess": true,
+    "rerollValuesOnSuccess": true,
+    "note": "升阶消耗 = 基础材料 × (当前tier+1)；成功率 = clamp(successBase - decay×当前tier, min, max)。成功提升一档品质并重算数值；失败仅消耗材料、品质不变。"
+  },
+  "affixes": [
+    { "id": "A01", "tier": "basic", "attr": "atk", "name": "攻击力", "kind": "flat", "min": 5, "max": 15, "weight": 100, "qualityScale": true, "levelScale": true, "conflicts": [], "prof": [] },
+    { "id": "A02", "tier": "basic", "attr": "matk", "name": "魔法攻击", "kind": "flat", "min": 5, "max": 15, "weight": 100, "qualityScale": true, "levelScale": true, "conflicts": [], "prof": [] },
+    { "id": "A03", "tier": "basic", "attr": "datk", "name": "道术攻击", "kind": "flat", "min": 5, "max": 15, "weight": 80, "qualityScale": true, "levelScale": true, "conflicts": [], "prof": [] },
+    { "id": "A04", "tier": "basic", "attr": "maxHp", "name": "生命上限", "kind": "flat", "min": 30, "max": 100, "weight": 100, "qualityScale": true, "levelScale": true, "conflicts": [], "prof": [] },
+    { "id": "A05", "tier": "basic", "attr": "def", "name": "物理防御", "kind": "flat", "min": 3, "max": 10, "weight": 90, "qualityScale": true, "levelScale": true, "conflicts": [], "prof": [] },
+    { "id": "A06", "tier": "basic", "attr": "mdef", "name": "魔法防御", "kind": "flat", "min": 3, "max": 10, "weight": 90, "qualityScale": true, "levelScale": true, "conflicts": [], "prof": [] },
+    { "id": "A07", "tier": "basic", "attr": "luck", "name": "幸运", "kind": "flat", "min": 1, "max": 3, "weight": 40, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "A08", "tier": "basic", "attr": "str", "name": "力量", "kind": "flat", "min": 2, "max": 6, "weight": 70, "qualityScale": true, "levelScale": true, "conflicts": [], "prof": [] },
+    { "id": "A09", "tier": "basic", "attr": "agi", "name": "敏捷", "kind": "flat", "min": 2, "max": 6, "weight": 70, "qualityScale": true, "levelScale": true, "conflicts": [], "prof": [] },
+    { "id": "A10", "tier": "basic", "attr": "vit", "name": "体质", "kind": "flat", "min": 2, "max": 6, "weight": 70, "qualityScale": true, "levelScale": true, "conflicts": [], "prof": [] },
+
+    { "id": "B07", "tier": "basic", "attr": "cdr", "name": "技能冷却缩减", "kind": "pct", "min": 0.05, "max": 0.12, "weight": 30, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "B08", "tier": "basic", "attr": "mpSave", "name": "技能消耗降低", "kind": "pct", "min": 0.10, "max": 0.20, "weight": 30, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "B09", "tier": "rare", "attr": "critDmg", "name": "暴击伤害", "kind": "pct", "min": 0.15, "max": 0.35, "weight": 35, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "B10", "tier": "basic", "attr": "skillRange", "name": "技能范围", "kind": "pct", "min": 0.10, "max": 0.20, "weight": 25, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+
+    { "id": "D06", "tier": "basic", "attr": "healBoost", "name": "受治疗效果", "kind": "pct", "min": 0.20, "max": 0.20, "weight": 20, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "D07", "tier": "basic", "attr": "maxMp", "name": "最大魔法", "kind": "flat", "min": 20, "max": 80, "weight": 40, "qualityScale": true, "levelScale": true, "conflicts": [], "prof": [] },
+    { "id": "D08", "tier": "basic", "attr": "mpRegen", "name": "魔法恢复速度", "kind": "pct", "min": 0.50, "max": 0.50, "weight": 20, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": [] },
+
+    { "id": "E01", "tier": "basic", "attr": "expBoost", "name": "经验加成", "kind": "pct", "min": 0.05, "max": 0.15, "weight": 25, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "E02", "tier": "basic", "attr": "goldBoost", "name": "金币加成", "kind": "pct", "min": 0.10, "max": 0.30, "weight": 25, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "E03", "tier": "basic", "attr": "dropRate", "name": "掉落率提升", "kind": "pct", "min": 0.05, "max": 0.15, "weight": 20, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "E04", "tier": "basic", "attr": "sellBonus", "name": "出售价格", "kind": "pct", "min": 0.20, "max": 0.20, "weight": 15, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "E05", "tier": "basic", "attr": "repairDiscount", "name": "修理费用降低", "kind": "pct", "min": 0.30, "max": 0.30, "weight": 15, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": [] },
+
+    { "id": "B01", "tier": "rare", "attr": "skillLv", "name": "烈火剑法", "kind": "special", "min": 1, "max": 1, "weight": 20, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": ["warrior"], "skill": "fire", "lv": 1 },
+    { "id": "B02", "tier": "rare", "attr": "skillLv", "name": "横扫千军", "kind": "special", "min": 1, "max": 1, "weight": 20, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": ["warrior"], "skill": "cleave", "lv": 1 },
+    { "id": "B03", "tier": "rare", "attr": "skillLv", "name": "冰咆哮", "kind": "special", "min": 1, "max": 1, "weight": 20, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": ["mage"], "skill": "ice", "lv": 1 },
+    { "id": "B04", "tier": "rare", "attr": "skillLv", "name": "雷电术", "kind": "special", "min": 1, "max": 1, "weight": 20, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": ["mage"], "skill": "thunder", "lv": 1 },
+    { "id": "B05", "tier": "rare", "attr": "skillLv", "name": "施毒术", "kind": "special", "min": 1, "max": 1, "weight": 20, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": ["taoist"], "skill": "poison", "lv": 1 },
+    { "id": "B06", "tier": "rare", "attr": "skillLv", "name": "治愈术", "kind": "special", "min": 1, "max": 1, "weight": 20, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": ["taoist"], "skill": "heal", "lv": 1 },
+
+    { "id": "C01", "tier": "rare", "attr": "lifesteal", "name": "吸血", "kind": "pct", "min": 0.03, "max": 0.08, "weight": 40, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "C02", "tier": "rare", "attr": "critRate", "name": "暴击率", "kind": "pct", "min": 0.02, "max": 0.06, "weight": 45, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "C03", "tier": "rare", "attr": "armorPen", "name": "破甲", "kind": "pct", "min": 0.03, "max": 0.10, "weight": 35, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "C04", "tier": "rare", "attr": "thorns", "name": "反伤", "kind": "pct", "min": 0.05, "max": 0.15, "weight": 30, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "C05", "tier": "rare", "attr": "slowAtk", "name": "减速攻击", "kind": "pct", "min": 0.15, "max": 0.30, "weight": 25, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "C06", "tier": "rare", "attr": "stunChance", "name": "眩晕几率", "kind": "pct", "min": 0.03, "max": 0.08, "weight": 25, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "C07", "tier": "rare", "attr": "burnDmg", "name": "灼烧伤害", "kind": "flat", "min": 5, "max": 20, "weight": 25, "qualityScale": true, "levelScale": true, "conflicts": [], "prof": [] },
+    { "id": "C08", "tier": "rare", "attr": "freezeSlow", "name": "冰冻减速", "kind": "pct", "min": 0.20, "max": 0.40, "weight": 20, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "C09", "tier": "rare", "attr": "chainLight", "name": "连锁闪电", "kind": "special", "min": 1, "max": 3, "weight": 20, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": [], "count": 3 },
+    { "id": "C10", "tier": "rare", "attr": "execute", "name": "致命一击", "kind": "special", "min": 0.20, "max": 0.20, "weight": 20, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": [], "threshold": 0.20, "multMin": 1.5, "multMax": 2.5 },
+
+    { "id": "D01", "tier": "rare", "attr": "hpRegen", "name": "每秒回血", "kind": "flat", "min": 5, "max": 20, "weight": 30, "qualityScale": true, "levelScale": true, "conflicts": [], "prof": [] },
+    { "id": "D02", "tier": "rare", "attr": "dmgReduce", "name": "受伤减免", "kind": "pct", "min": 0.03, "max": 0.10, "weight": 35, "qualityScale": true, "levelScale": false, "conflicts": [], "prof": [] },
+    { "id": "D03", "tier": "rare", "attr": "shield", "name": "护盾值", "kind": "flat", "min": 50, "max": 200, "weight": 25, "qualityScale": true, "levelScale": true, "conflicts": [], "prof": [] },
+    { "id": "D04", "tier": "rare", "attr": "cheatDeath", "name": "免死一次", "kind": "special", "min": 300, "max": 300, "weight": 15, "qualityScale": false, "levelScale": false, "conflicts": ["reviveHp"], "prof": [] },
+    { "id": "D05", "tier": "rare", "attr": "reviveHp", "name": "复活恢复", "kind": "pct", "min": 0.30, "max": 0.60, "weight": 15, "qualityScale": true, "levelScale": false, "conflicts": ["cheatDeath"], "prof": [] },
+
+    { "id": "F01", "tier": "legendary", "attr": "blink", "name": "瞬移", "kind": "special", "min": 15, "max": 15, "weight": 30, "qualityScale": false, "levelScale": false, "conflicts": ["transform"], "prof": [], "cd": 15, "range": 150 },
+    { "id": "F02", "tier": "legendary", "attr": "transform", "name": "变身(攻防提升)", "kind": "special", "min": 0.30, "max": 0.30, "weight": 30, "qualityScale": false, "levelScale": false, "conflicts": ["blink"], "prof": [], "duration": 10, "boost": 0.30 },
+    { "id": "F03", "tier": "legendary", "attr": "aura", "name": "光环:友军攻击", "kind": "special", "min": 0.10, "max": 0.10, "weight": 20, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": [], "radius": 100, "stat": "atk", "val": 0.10 },
+    { "id": "F04", "tier": "legendary", "attr": "reveal", "name": "透视(显隐)", "kind": "special", "min": 0, "max": 0, "weight": 15, "qualityScale": false, "levelScale": false, "conflicts": [], "prof": [], "duration": 0 }
+  ]
+}
