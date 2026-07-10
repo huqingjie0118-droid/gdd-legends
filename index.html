@@ -169,6 +169,13 @@ canvas {
   backdrop-filter: blur(12px);
   overflow: hidden;
 }
+/* 地图导航：上一图 / 下一图 —— 视觉与顶部状态栏一致（金色玻璃拟态） */
+#map-nav{position:absolute;top:70px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(28,22,42,0.92),rgba(16,12,28,0.96));border:1px solid rgba(255,215,0,0.18);border-radius:12px;padding:5px 12px;z-index:9;box-shadow:0 6px 20px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);backdrop-filter:blur(10px);}
+.map-nav-btn{font:600 12px "Microsoft YaHei",sans-serif;color:#ffd700;background:rgba(255,215,0,0.10);border:1px solid rgba(255,215,0,0.35);border-radius:8px;padding:7px 13px;cursor:pointer;transition:background .12s,border-color .12s,box-shadow .12s,transform .05s;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.6);}
+.map-nav-btn:hover:not(:disabled){background:rgba(255,215,0,0.22);border-color:rgba(255,215,0,0.6);box-shadow:0 0 10px rgba(255,215,0,0.25);}
+.map-nav-btn:active:not(:disabled){transform:scale(0.95);}
+.map-nav-btn:disabled{color:#5a5a5a;background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.07);cursor:not-allowed;text-shadow:none;}
+#map-nav-name{font:600 12px "Microsoft YaHei",sans-serif;color:#ffd700;min-width:68px;text-align:center;text-shadow:0 0 6px rgba(255,200,0,0.3);letter-spacing:0.5px;}
 /* 左侧：角色信息区 */
 .stat-group {
   display: flex;
@@ -664,6 +671,13 @@ canvas {
         <span id="map-name-display" style="font-size:11px;color:#ffd700;font-weight:600;text-shadow:0 0 6px rgba(255,200,0,0.3);letter-spacing:0.5px;">比奇城郊</span>
         <span id="inflation-display" style="font-size:9px;color:#686;display:block;"></span>
       </div>
+    </div>
+
+    <!-- 地图导航：上一图 / 下一图（与出口传送阵一致） -->
+    <div id="map-nav" style="display:none;">
+      <button id="map-prev" class="map-nav-btn" type="button" onclick="goPrevMap()" title="返回上一张地图">◀ 上一图</button>
+      <span id="map-nav-name">比奇城郊</span>
+      <button id="map-next" class="map-nav-btn" type="button" onclick="goNextMap()" title="前往下一张地图">下一图 ▶</button>
     </div>
 
     <!-- Boss 血条 -->
@@ -5896,6 +5910,50 @@ function startTransition(targetIdx) {
   mapTransition = { active: true, t: 0, target: targetIdx, swapped: false };
 }
 
+// 地图导航：上一图 / 下一图
+// 与 in-world 出口传送阵保持完全一致的交互与视觉：传送费经济 sink + 淡入淡出过渡
+function goNextMap() {
+  if (mapTransition.active || !player || player.state === 'dead') return;
+  if (currentMapIndex >= MAP_DEFS.length - 1) return;
+  const next = MAP_DEFS[currentMapIndex + 1];
+  if (playerLevel < next.minLevel) { addFloatText(player.x, player.y - 40, `🔒 需 Lv.${next.minLevel} 解锁`, '#f88'); return; }
+  const tcost = (typeof GameEconomy !== 'undefined') ? GameEconomy.teleportCost(currentMapIndex, currentMapIndex + 1) : 40;
+  if (playerGold < tcost) { addFloatText(player.x, player.y - 40, `💰 传送需 ${tcost} 金（不足）`, '#f88'); return; }
+  playerGold -= tcost; updateTopBarUI();
+  addFloatText(player.x, player.y - 40, `传送 -${tcost}金`, '#ffce4a');
+  startTransition(currentMapIndex + 1);
+}
+function goPrevMap() {
+  if (mapTransition.active || !player || player.state === 'dead') return;
+  if (currentMapIndex <= 0) return;
+  // 返回上一张地图无需等级门槛（已到过 / 更低阶地图恒可进入），仅收对称传送费
+  const tcost = (typeof GameEconomy !== 'undefined') ? GameEconomy.teleportCost(currentMapIndex, currentMapIndex - 1) : 40;
+  if (playerGold < tcost) { addFloatText(player.x, player.y - 40, `💰 传送需 ${tcost} 金（不足）`, '#f88'); return; }
+  playerGold -= tcost; updateTopBarUI();
+  addFloatText(player.x, player.y - 40, `传送 -${tcost}金`, '#ffce4a');
+  startTransition(currentMapIndex - 1);
+}
+function updateMapNav() {
+  const nav = document.getElementById('map-nav');
+  if (!nav) return;
+  const acc = document.getElementById('account-screen');
+  const inGame = player && gameRunning && (!acc || acc.style.display === 'none' || acc.offsetParent === null);
+  if (!inGame) { nav.style.display = 'none'; return; }
+  nav.style.display = 'flex';
+  const prevBtn = document.getElementById('map-prev');
+  const nextBtn = document.getElementById('map-next');
+  const nameEl = document.getElementById('map-nav-name');
+  if (nameEl) nameEl.textContent = curMap().name;
+  if (prevBtn) prevBtn.disabled = (currentMapIndex <= 0);
+  if (nextBtn) {
+    const atLast = currentMapIndex >= MAP_DEFS.length - 1;
+    const next = atLast ? null : MAP_DEFS[currentMapIndex + 1];
+    const locked = next && playerLevel < next.minLevel;
+    nextBtn.disabled = atLast || !!locked;
+    nextBtn.textContent = locked ? ('🔒 Lv.' + next.minLevel) : '下一图 ▶';
+  }
+}
+
 function spawnMapBoss() {
   const m = curMap();
   const def = getMonsterDef(m.bossId);
@@ -7081,6 +7139,7 @@ function gameLoop(timestamp) {
   updateTopBarUI();
   updateSkillBarUI();
   drawMinimap();
+  updateMapNav();
   if (typeof Quest !== 'undefined') Quest.tick();
   
   requestAnimationFrame(gameLoop);
