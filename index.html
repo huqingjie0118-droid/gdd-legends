@@ -726,6 +726,21 @@ canvas {
       .bp-close:hover { border-color:#ffd24a; }
       .bp-empty { text-align:center; color:#bbb; padding:30px 10px; line-height:1.9; font-size:13px; }
       .bp-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(212px, 1fr)); gap:10px; }
+      /* 分类标签 */
+      .bp-tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+      .bp-tab { padding:5px 12px; border:1px solid #4a3a6a; border-radius:999px; background:#2a2038; color:#ccc; font-size:12px; cursor:pointer; font-family:inherit; }
+      .bp-tab:hover { border-color:#ffd700; }
+      .bp-tab.on { border-color:#ffd700; color:#ffd700; background:rgba(255,215,0,0.12); }
+      /* 可拖拽提示 */
+      .bp-item[draggable="true"] { cursor:grab; }
+      .bp-item[draggable="true"]:active { cursor:grabbing; }
+      .bp-item.drag-over { outline:2px dashed #ffd700; }
+      /* 消耗品 / 材料 卡片 */
+      .bp-item-consumable, .bp-item-material { display:flex; align-items:center; gap:10px; }
+      .bp-item-icon { font-size:30px; width:42px; text-align:center; flex:0 0 42px; text-shadow:0 0 10px currentColor; }
+      .bp-item-main { flex:1; min-width:0; }
+      .bp-item-desc { font-size:11px; color:#a9a3bd; line-height:1.4; margin-top:3px; }
+      .bp-qty { font-size:13px; color:#ffd700; font-weight:bold; }
       .bp-item { border:1px solid #555; border-radius:10px; padding:10px 12px; background:rgba(255,255,255,0.03); }
       .bp-item-name { font-size:15px; font-weight:bold; text-shadow:0 0 8px currentColor; }
       .bp-item-slot { font-size:11px; color:#b9b3c9; margin:2px 0 8px; }
@@ -1655,6 +1670,49 @@ function generateEquipment(sourceLevel) {
   };
 }
 
+// ==================== 消耗品 / 材料（背包非装备类物品） ====================
+// 背包支持四类：武器(equip)、防具(equip)、消耗品(consumable)、材料(material)
+const CONSUMABLE_DEFS = {
+  hp_potion:   { id:'hp_potion',   kind:'consumable', name:'生命药水',   icon:'🧪', color:'#e55', quality:'common', desc:'立即恢复 35% 最大生命', effect:{ hpPct:0.35 } },
+  mp_potion:   { id:'mp_potion',   kind:'consumable', name:'魔法药水',   icon:'🔵', color:'#59f', quality:'common', desc:'立即恢复 40% 最大魔法', effect:{ mpPct:0.40 } },
+  big_hp:      { id:'big_hp',      kind:'consumable', name:'大生命药水', icon:'⚗️', color:'#f73', quality:'good',   desc:'立即恢复 70% 最大生命', effect:{ hpPct:0.70 } },
+  town_scroll: { id:'town_scroll', kind:'consumable', name:'回城卷轴',   icon:'📜', color:'#fd5', quality:'common', desc:'使用后返回比奇城郊',     effect:{ town:true } },
+};
+const MATERIAL_DEFS = {
+  iron_ore:    { id:'iron_ore',    kind:'material', name:'铁矿石',   icon:'⛏️', color:'#bbb', quality:'common', desc:'强化装备的基础材料' },
+  herb:        { id:'herb',        kind:'material', name:'草药',     icon:'🌿', color:'#6c6', quality:'common', desc:'炼制药水的原料' },
+  monster_core:{ id:'monster_core',kind:'material', name:'魔物核心', icon:'💠', color:'#6cf', quality:'rare',   desc:'高阶合成与附魔材料' },
+  dragon_scale:{ id:'dragon_scale',kind:'material', name:'龙鳞',     icon:'🐉', color:'#f96', quality:'epic',   desc:'传说级锻造材料' },
+};
+function _pickDef(table) { const ks = Object.keys(table); return table[ks[Math.floor(Math.random() * ks.length)]]; }
+function makeConsumable() {
+  const d = _pickDef(CONSUMABLE_DEFS);
+  const stack = (d.id === 'hp_potion' || d.id === 'mp_potion') ? 1 + Math.floor(Math.random() * 2) : 1;
+  return Object.assign({}, d, { uid: 'c' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7), qty: stack });
+}
+function makeMaterial(mapTier) {
+  const pool = ['iron_ore', 'herb'];
+  if (mapTier >= 1) pool.push('monster_core');
+  if (mapTier >= 3) pool.push('dragon_scale');
+  const id = pool[Math.floor(Math.random() * pool.length)];
+  return Object.assign({}, MATERIAL_DEFS[id], { uid: 'm' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7), qty: 1 + Math.floor(Math.random() * 2) });
+}
+// 使用消耗品（点击背包内"使用"按钮触发）
+window.useConsumable = function(uid) {
+  const idx = playerBackpack.findIndex(e => e.uid === uid);
+  if (idx === -1) return;
+  const it = playerBackpack[idx];
+  if (!it || it.kind !== 'consumable' || !it.effect) return;
+  if (it.effect.hpPct) { player.hp = Math.min(playerStats.maxHp, player.hp + Math.round(playerStats.maxHp * it.effect.hpPct)); }
+  if (it.effect.mpPct) { player.mp = Math.min(playerStats.maxMp, player.mp + Math.round(playerStats.maxMp * it.effect.mpPct)); }
+  if (it.effect.town) { currentMapIndex = 0; buildTerrain(0); initEnvObjects(); addFloatText(player.x, player.y, '📜 返回比奇城郊', '#fd5'); }
+  it.qty = (it.qty || 1) - 1;
+  if (it.qty <= 0) playerBackpack.splice(idx, 1);
+  saveGame();
+  renderBackpack();
+  addFloatText(player.x, player.y - player.size - 30, '✨ 使用了 ' + it.name, it.color || '#fff');
+};
+
 // ==================== 攻击距离系统（战士武器类型） ====================
 // 返回当前武器对应的攻击距离（像素）
 // 非战士职业使用默认技能距离
@@ -2114,6 +2172,8 @@ let screenShake = 0;
 let hitStop = 0;
 let gameOver = false;
 const SAVE_KEY = 'legends_save_v1';
+// 按职业分槽（每个职业独立存档）；服务端 SQLite 以 slot=职业 存储，localStorage 以同键缓存
+const SAVE_KEY_OF = (slot) => SAVE_KEY + ':' + (slot || 'warrior');
 
 
 // ==================== 像素精灵绘制器 v2（描边 + 明暗 + 多职业/怪物） ====================
@@ -3195,7 +3255,7 @@ class Entity {
         // 部位破坏额外掉落
         if (Math.random() < 0.4) {
           const drop = generateEquipment(playerLevel, 1, 1);
-          if (drop) { drops.push({ x: this.x + rand(-30, 30), y: this.y + rand(-20, 20), item: drop, timer: 6 }); }
+          if (drop) { drops.push({ x: this.x + rand(-30, 30), y: this.y + rand(-20, 20), equip: drop, timer: 6 }); }
         }
       }
     }
@@ -3865,6 +3925,17 @@ class Enemy extends Entity {
       drops.push({ x: this.x, y: this.y, equip, lifeTime: 30 });
       addFloatText(this.x, this.y - this.size, `✨ ${equip.qualityName} ${equip.slotName}!`, equip.color);
       Sound.drop(equip.quality);
+    }
+
+    // 掉落消耗品（约 30%）
+    if (Math.random() < 0.30) {
+      const ci = makeConsumable();
+      drops.push({ x: this.x + rand(-20, 20), y: this.y + rand(-20, 20), item: ci, lifeTime: 30 });
+    }
+    // 掉落材料（地图阶越高概率越大）
+    if (Math.random() < 0.12 + currentMapIndex * 0.03) {
+      const mi = makeMaterial(currentMapIndex);
+      drops.push({ x: this.x + rand(-20, 20), y: this.y + rand(-20, 20), item: mi, lifeTime: 30 });
     }
     
     // 金币飘字
@@ -5722,26 +5793,51 @@ function saveGame() {
       skillList: AUTO.skillList,
     },
   };
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) {}
+  try { localStorage.setItem(SAVE_KEY_OF(playerProfession), JSON.stringify(data)); } catch (e) {}
+  // 服务端持久化（SQLite 权威源，异步推送，失败静默回退 localStorage）
+  try {
+    fetch('/api/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slot: playerProfession, data }),
+    }).catch(() => {});
+  } catch (e) {}
   if (typeof Account !== 'undefined') Account.syncProfile();
 }
 
-function loadGame() {
+// 恢复自动化配置（服务端/本地两份存档共用）
+function applyAutoConfig(d) {
+  if (!d || !d.auto) return;
+  AUTO.combat = d.auto.combat !== false;
+  AUTO.pickup = !!d.auto.pickup;
+  AUTO.pickupMinQuality = d.auto.pickupMinQuality || 'common';
+  AUTO.skill = !!d.auto.skill;
+  AUTO.skillList = d.auto.skillList || {};
+}
+
+// 读档：异步，优先服务端 SQLite（权威源），失败回退 localStorage（兼容旧版单键存档）
+async function loadGame(slot) {
+  slot = slot || playerProfession || 'warrior';
+  // 1) 服务端优先
   try {
-    const s = localStorage.getItem(SAVE_KEY);
+    const r = await fetch('/api/load?slot=' + encodeURIComponent(slot));
+    if (r.ok) {
+      const j = await r.json();
+      if (j && j.ok && j.data) {
+        try { localStorage.setItem(SAVE_KEY_OF(slot), JSON.stringify(j.data)); } catch (e) {}
+        if (Array.isArray(j.data.clearedMaps)) { clearedMaps.clear(); j.data.clearedMaps.forEach(i => clearedMaps.add(i)); }
+        applyAutoConfig(j.data);
+        return j.data;
+      }
+    }
+  } catch (e) {}
+  // 2) 回退 localStorage（兼容旧版单键 SAVE_KEY）
+  try {
+    let s = localStorage.getItem(SAVE_KEY_OF(slot));
+    if (!s) s = localStorage.getItem(SAVE_KEY);
     const d = s ? JSON.parse(s) : null;
-    if (d && Array.isArray(d.clearedMaps)) {
-      clearedMaps.clear();
-      d.clearedMaps.forEach(i => clearedMaps.add(i));
-    }
-    // 恢复自动化配置
-    if (d.auto) {
-      AUTO.combat = d.auto.combat !== false;
-      AUTO.pickup = !!d.auto.pickup;
-      AUTO.pickupMinQuality = d.auto.pickupMinQuality || 'common';
-      AUTO.skill = !!d.auto.skill;
-      AUTO.skillList = d.auto.skillList || {};
-    }
+    if (d && Array.isArray(d.clearedMaps)) { clearedMaps.clear(); d.clearedMaps.forEach(i => clearedMaps.add(i)); }
+    applyAutoConfig(d);
     return d;
   } catch (e) { return null; }
 }
@@ -6024,6 +6120,10 @@ function buildEquipBar() {
   SLOT_DEFS.forEach(slot => {
     const div = document.createElement('div');
     div.className = 'equip-slot';
+    div.draggable = !!playerEquipment[slot.key];
+    div.ondragstart = (e) => { if (playerEquipment[slot.key]) bpDragStart(e, 'equip', slot.key); };
+    div.ondragover = (e) => bpAllowDrop(e);
+    div.ondrop = (e) => bpDropOnSlot(e, slot.key);
     const eq = playerEquipment[slot.key];
     if (eq) {
       div.classList.add('has-item');
@@ -6151,6 +6251,21 @@ window.discardDropItem = function(uid) {
 };
 
 // ==================== 背包 / 库存系统 ====================
+function backpackOpen() {
+  const p = document.getElementById('backpack-panel');
+  return !!(p && p.style.display === 'block');
+}
+// 入包：消耗品/材料按 id 堆叠；装备各自独立；背包上限 20
+function addItemToBackpack(item) {
+  if (!item) return false;
+  if (item.kind === 'consumable' || item.kind === 'material') {
+    const ex = playerBackpack.find(e => e && e.kind === item.kind && e.id === item.id);
+    if (ex) { ex.qty = (ex.qty || 1) + (item.qty || 1); return true; }
+  }
+  if (playerBackpack.length >= 20) return false;
+  playerBackpack.push(item);
+  return true;
+}
 function toggleBackpack() {
   const p = document.getElementById('backpack-panel');
   if (p.style.display === 'block') {
@@ -6188,39 +6303,125 @@ function backpackSellPrice(eq) {
   return Math.max(1, Math.round((5 + lvl * 2) * qm));
 }
 
+// 背包分类与拖拽状态
+let bpCategory = 'all';
+function itemKind(e) { return (e && e.kind) || 'equip'; }
+window.bpDrag = null;
+function bpDragStart(e, from, ref) { window.bpDrag = { from, ref }; try { e.dataTransfer.setData('text/plain', 'x'); } catch (_) {} }
+function bpAllowDrop(e) { e.preventDefault(); }
+function bpDropOnBackpack(e, targetUid) {
+  e.preventDefault();
+  const d = window.bpDrag; window.bpDrag = null;
+  if (!d) return;
+  if (d.from === 'equip') { unequipToBackpack(d.ref); return; }   // 从装备栏拖回背包 → 卸下
+  if (d.from === 'backpack' && targetUid && d.ref !== targetUid) { // 背包内重排
+    const from = playerBackpack.findIndex(x => x.uid === d.ref);
+    const to = playerBackpack.findIndex(x => x.uid === targetUid);
+    if (from >= 0 && to >= 0) {
+      const [m] = playerBackpack.splice(from, 1);
+      const to2 = playerBackpack.findIndex(x => x.uid === targetUid);
+      playerBackpack.splice(to2, 0, m);
+      saveGame(); renderBackpack();
+    }
+  }
+}
+function bpDropOnSlot(e, slotKey) {
+  e.preventDefault();
+  const d = window.bpDrag; window.bpDrag = null;
+  if (!d) return;
+  if (d.from === 'backpack') equipFromBackpack(d.ref); // 背包装备拖到槽位 → 穿戴
+}
+function bpSetCategory(k) { bpCategory = k; renderBackpack(); }
+// 装备栏 → 背包（拖拽卸下）
+window.unequipToBackpack = function(slotKey) {
+  const eq = playerEquipment[slotKey];
+  if (!eq) return;
+  if (playerBackpack.length >= 20) { addFloatText(player.x, player.y - player.size - 30, '背包已满!', '#f77'); return; }
+  delete playerEquipment[slotKey];
+  playerBackpack.push(eq);
+  playerStats = calcPlayerStats(playerProfession, playerLevel, Object.values(playerEquipment));
+  player.maxHp = playerStats.maxHp; player.maxMp = playerStats.maxMp;
+  saveGame(); buildEquipBar(); renderBackpack();
+  addFloatText(player.x, player.y - player.size - 30, '⬇️ 卸下了 ' + eq.name, eq.color);
+};
+
 function renderBackpack() {
   const p = document.getElementById('backpack-panel');
+  const kindOf = itemKind;
+  const catCount = (k) => {
+    if (k === 'all') return playerBackpack.length;
+    if (k === 'weapon') return playerBackpack.filter(e => kindOf(e) === 'equip' && e.slotKey === 'weapon').length;
+    if (k === 'armor') return playerBackpack.filter(e => kindOf(e) === 'equip' && e.slotKey !== 'weapon').length;
+    return playerBackpack.filter(e => kindOf(e) === k).length;
+  };
+  const CATS = [
+    { key:'all', name:'全部' }, { key:'weapon', name:'武器' },
+    { key:'armor', name:'防具' }, { key:'consumable', name:'消耗品' }, { key:'material', name:'材料' },
+  ];
   let html = '<div class="bp-head">🎒 背包 <span class="bp-count">' + playerBackpack.length + '/20</span>' +
              '<button class="bp-close" onclick="toggleBackpack()">✕</button></div>';
-  if (!playerBackpack.length) {
-    html += '<div class="bp-empty">背包空空如也<br><span style="font-size:11px;color:#889;">击杀怪物获取装备；替换已穿戴装备时，旧装备会自动存入此处</span></div>';
+  // 分类标签（仅显示有内容的分类）
+  html += '<div class="bp-tabs">';
+  for (const c of CATS) {
+    const n = catCount(c.key);
+    if (n === 0 && c.key !== 'all') continue;
+    html += '<button class="bp-tab' + (bpCategory === c.key ? ' on' : '') + '" onclick="bpSetCategory(\'' + c.key + '\')">' + c.name + ' ' + n + '</button>';
+  }
+  html += '</div>';
+
+  const items = (bpCategory === 'all') ? playerBackpack :
+    (bpCategory === 'weapon') ? playerBackpack.filter(e => kindOf(e) === 'equip' && e.slotKey === 'weapon') :
+    (bpCategory === 'armor') ? playerBackpack.filter(e => kindOf(e) === 'equip' && e.slotKey !== 'weapon') :
+    playerBackpack.filter(e => kindOf(e) === bpCategory);
+
+  if (!items.length) {
+    html += '<div class="bp-empty">该分类暂无物品<br><span style="font-size:11px;color:#889;">击杀怪物获取装备/材料，或使用药水</span></div>';
   } else {
     html += '<div class="bp-grid">';
-    for (const eq of playerBackpack) {
-      const equipped = playerEquipment[eq.slotKey];
-      const cmp = equipped ? compareEquip(eq, equipped)
-                           : '<span style="color:#7f7;">（该槽位未装备）</span>';
-      const affixHtml = (eq.affixes || []).map(a =>
-        '<div class="affix-line" style="color:' +
-        (a.cat === 'C' || a.cat === 'F' ? '#f80' : (a.cat === 'D' ? '#4f0' : '#ccc')) + '">' +
-        affixDisplay(a) + '</div>').join('');
-      html += '<div class="bp-item drop-quality-' + eq.quality + '">' +
-                '<div class="bp-item-name" style="color:' + eq.color + '">' + eq.name + '</div>' +
-                (eq.set && typeof Sets !== 'undefined' && Sets.SETS[eq.set] ? '<div class="bp-set" style="color:' + Sets.SETS[eq.set].color + '">【' + Sets.SETS[eq.set].name + '】</div>' : '') +
-                '<div class="bp-item-slot">' + eq.qualityName + ' ' + eq.slotName + (eq.weaponType && WEAPON_TYPES[eq.weaponType] ? ' · ' + WEAPON_TYPES[eq.weaponType].name + ' 距离:' + WEAPON_TYPES[eq.weaponType].range + 'px' : '') + '</div>' +
-                '<div class="bp-affixes">' + affixHtml + '</div>' +
-                '<div class="bp-cmp">对比已穿：' + cmp + '</div>' +
-                '<div class="bp-actions">' +
-                  '<button class="bp-btn bp-equip" onclick="equipFromBackpack(\'' + eq.uid + '\')">穿戴</button>' +
-                  '<button class="bp-btn bp-enhance" onclick="enhanceEquip(\'' + eq.uid + '\')">⚒强化 ' + GameEconomy.enhCost(eq.enhanceLevel || 0, { equipLevel: eq.level || 0 }) + '</button>' +
-                  '<button class="bp-btn bp-reforge" onclick="reforgeEquip(\'' + eq.uid + '\')">♻重铸 ' + (typeof NPCShop !== 'undefined' ? NPCShop.reforgeCost(eq, { serverAvgLevel: SERVER_AVG_LEVEL }) : '?') + '</button>' +
-                  '<button class="bp-btn bp-sell" onclick="sellFromBackpack(\'' + eq.uid + '\')">卖 ' + backpackSellPrice(eq) + '</button>' +
-                  '<button class="bp-btn bp-sell" onclick="openGemPanel(\'' + eq.uid + '\')">💎镶嵌</button>' +
-                  '<button class="bp-btn bp-sell" onclick="openRefinePanel(\'' + eq.uid + '\')">🔧洗练</button>' +
-                  '<button class="bp-btn bp-discard" onclick="discardFromBackpack(\'' + eq.uid + '\')">丢弃</button>' +
-                '</div>' +
-                (eq.enhanceLevel ? '<div class="bp-enh">已强化 +' + eq.enhanceLevel + '</div>' : '') +
-              '</div>';
+    for (const it of items) {
+      const k = kindOf(it);
+      const ref = it.uid || it.id;
+      const dragAttrs = 'draggable="true" ondragstart="bpDragStart(event,\'backpack\',\'' + ref + '\')" ondragover="bpAllowDrop(event)" ondrop="bpDropOnBackpack(event,\'' + ref + '\')"';
+      if (k === 'equip') {
+        const eq = it;
+        const equipped = playerEquipment[eq.slotKey];
+        const cmp = equipped ? compareEquip(eq, equipped) : '<span style="color:#7f7;">（该槽位未装备）</span>';
+        const affixHtml = (eq.affixes || []).map(a =>
+          '<div class="affix-line" style="color:' +
+          (a.cat === 'C' || a.cat === 'F' ? '#f80' : (a.cat === 'D' ? '#4f0' : '#ccc')) + '">' +
+          affixDisplay(a) + '</div>').join('');
+        html += '<div class="bp-item drop-quality-' + eq.quality + '" ' + dragAttrs + '>' +
+                  '<div class="bp-item-name" style="color:' + eq.color + '">' + eq.name + '</div>' +
+                  (eq.set && typeof Sets !== 'undefined' && Sets.SETS[eq.set] ? '<div class="bp-set" style="color:' + Sets.SETS[eq.set].color + '">【' + Sets.SETS[eq.set].name + '】</div>' : '') +
+                  '<div class="bp-item-slot">' + eq.qualityName + ' ' + eq.slotName + (eq.weaponType && WEAPON_TYPES[eq.weaponType] ? ' · ' + WEAPON_TYPES[eq.weaponType].name + ' 距离:' + WEAPON_TYPES[eq.weaponType].range + 'px' : '') + '</div>' +
+                  '<div class="bp-affixes">' + affixHtml + '</div>' +
+                  '<div class="bp-cmp">对比已穿：' + cmp + '</div>' +
+                  '<div class="bp-actions">' +
+                    '<button class="bp-btn bp-equip" onclick="equipFromBackpack(\'' + eq.uid + '\')">穿戴</button>' +
+                    '<button class="bp-btn bp-enhance" onclick="enhanceEquip(\'' + eq.uid + '\')">⚒强化 ' + GameEconomy.enhCost(eq.enhanceLevel || 0, { equipLevel: eq.level || 0 }) + '</button>' +
+                    '<button class="bp-btn bp-reforge" onclick="reforgeEquip(\'' + eq.uid + '\')">♻重铸 ' + (typeof NPCShop !== 'undefined' ? NPCShop.reforgeCost(eq, { serverAvgLevel: SERVER_AVG_LEVEL }) : '?') + '</button>' +
+                    '<button class="bp-btn bp-sell" onclick="sellFromBackpack(\'' + eq.uid + '\')">卖 ' + backpackSellPrice(eq) + '</button>' +
+                    '<button class="bp-btn bp-sell" onclick="openGemPanel(\'' + eq.uid + '\')">💎镶嵌</button>' +
+                    '<button class="bp-btn bp-sell" onclick="openRefinePanel(\'' + eq.uid + '\')">🔧洗练</button>' +
+                    '<button class="bp-btn bp-discard" onclick="discardFromBackpack(\'' + eq.uid + '\')">丢弃</button>' +
+                  '</div>' +
+                  (eq.enhanceLevel ? '<div class="bp-enh">已强化 +' + eq.enhanceLevel + '</div>' : '') +
+                '</div>';
+      } else {
+        // 消耗品 / 材料：图标 + 名称 + 数量 + 描述
+        const qty = it.qty || 1;
+        html += '<div class="bp-item bp-item-' + k + '" ' + dragAttrs + '>' +
+                  '<div class="bp-item-icon">' + (it.icon || '❔') + '</div>' +
+                  '<div class="bp-item-main">' +
+                    '<div class="bp-item-name" style="color:' + (it.color || '#ccc') + '">' + it.name + (qty > 1 ? ' <span class="bp-qty">×' + qty + '</span>' : '') + '</div>' +
+                    '<div class="bp-item-desc">' + (it.desc || '') + '</div>' +
+                  '</div>' +
+                  '<div class="bp-actions">' +
+                    (k === 'consumable' ? '<button class="bp-btn bp-equip" onclick="useConsumable(\'' + it.uid + '\')">使用</button>' : '') +
+                    '<button class="bp-btn bp-discard" onclick="discardFromBackpack(\'' + it.uid + '\')">丢弃</button>' +
+                  '</div>' +
+                '</div>';
+      }
     }
     html += '</div>';
   }
@@ -6744,7 +6945,14 @@ window.repairAll = function() {
 
 window.discardFromBackpack = function(uid) {
   const idx = playerBackpack.findIndex(e => e.uid === uid);
-  if (idx !== -1) playerBackpack.splice(idx, 1);
+  if (idx === -1) return;
+  const it = playerBackpack[idx];
+  // 堆叠物品（消耗品/材料）逐个丢弃
+  if ((it.kind === 'consumable' || it.kind === 'material') && (it.qty || 1) > 1) {
+    it.qty -= 1;
+  } else {
+    playerBackpack.splice(idx, 1);
+  }
   saveGame();
   renderBackpack();
 };
@@ -7018,9 +7226,19 @@ function update(dt) {
     for (let i = drops.length - 1; i >= 0; i--) {
       const d = drops[i];
       if (dist(player.x, player.y, d.x, d.y) < 70) {
+        // 消耗品/材料：直接拾取（无需确认）
+        if (d.item && d.item.kind !== 'equip') {
+          if (addItemToBackpack(d.item)) {
+            addFloatText(player.x, player.y - player.size - 18, `🎒 ${d.item.icon} ${d.item.name}`, d.item.color || '#fff');
+            drops.splice(i, 1);
+            saveGame();
+            if (backpackOpen()) renderBackpack();
+          }
+          continue;
+        }
         window.__pendingDropIdx = i;
         showDropPanel(d.equip);
-        break; // 一次只捡一个
+        break; // 一次只捡一个（装备需确认）
       }
     }
     // 宝箱开启
@@ -7047,7 +7265,19 @@ function update(dt) {
     for (let i = drops.length - 1; i >= 0; i--) {
       if (i === window.__pendingDropIdx) continue; // 正在弹拾取面板的跳过
       const d = drops[i];
-      if (!d || !d.equip) continue;
+      if (!d) continue;
+      // 消耗品/材料：始终拾取（不受品质过滤影响）
+      if (d.item && d.item.kind !== 'equip') {
+        if (dist(player.x, player.y, d.x, d.y) < 64) {
+          if (addItemToBackpack(d.item)) {
+            addFloatText(player.x, player.y - player.size - 18, `🎒 ${d.item.icon} ${d.item.name}`, d.item.color || '#fff');
+            drops.splice(i, 1);
+            if (backpackOpen()) renderBackpack();
+          }
+        }
+        continue;
+      }
+      if (!d.equip) continue;
       const eq = d.equip;
       const rank = QUALITY_ORDER.indexOf(eq.quality);
       if (rank < 0 || rank < minRank) continue; // 低于设定品质 → 忽略，不自动拾取
@@ -7058,7 +7288,7 @@ function update(dt) {
           if (typeof stats_dropsByQuality !== 'undefined') stats_dropsByQuality[eq.quality] = (stats_dropsByQuality[eq.quality] || 0) + 1;
           addFloatText(player.x, player.y - player.size - 18, `🎒 ${eq.qualityName}`, eq.color);
           drops.splice(i, 1);
-          if (typeof renderBackpack === 'function' && document.getElementById('backpack-panel') && document.getElementById('backpack-panel').style.display === 'block') renderBackpack();
+          if (backpackOpen()) renderBackpack();
         }
       }
     }
@@ -7583,7 +7813,7 @@ function setupInput() {
 
 
 // ==================== 初始化 ====================
-function selectProfession(prof) {
+async function selectProfession(prof) {
   playerProfession = prof;
   // 流派觉醒状态
   if (typeof Archetype !== 'undefined') {
@@ -7606,7 +7836,7 @@ function selectProfession(prof) {
   player.spriteKey = prof;
   
   // 读取同职业存档
-  const save = loadGame();
+  const save = await loadGame(prof);
   if (save && save.prof === prof) {
     playerLevel = save.level || 1;
     playerExp = save.exp || 0;
@@ -7840,7 +8070,7 @@ window.__game = {
   get screenShake() { return screenShake; },
   get playerLevel() { return playerLevel; },
   get audio() { return Sound.state(); },
-  get saveRaw() { return localStorage.getItem(SAVE_KEY); },
+  get saveRaw() { return localStorage.getItem(SAVE_KEY_OF(playerProfession || 'warrior')); },
   get mapIndex() { return currentMapIndex; },
   get mapName() { return curMap().name; },
   get mapCount() { return MAP_DEFS.length; },
@@ -7849,6 +8079,7 @@ window.__game = {
   get AUTO() { return AUTO; },
   get drops() { return drops; },
   get playerBackpack() { return playerBackpack; },
+  get playerEquipment() { return playerEquipment; },
   get skillCDs() { return skillCDs; },
   get activeBoss() {
     const b = enemies.find(e => e.isBoss && e.state !== 'dead');
@@ -7858,7 +8089,12 @@ window.__game = {
 window.__dbg = {
   setLevel(n) { playerLevel = n; },
   save() { saveGame(); },
-  clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} },
+  clearSave() {
+    try {
+      localStorage.removeItem(SAVE_KEY_OF(playerProfession || 'warrior'));
+      localStorage.removeItem(SAVE_KEY); // 兼容旧档
+    } catch (e) {}
+  },
   kill() { if (player) { player.hp = 0; player.state = 'dead'; } },
   setMap(i) {
     if (i < 0 || i >= MAP_DEFS.length) return 'bad-index';
