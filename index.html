@@ -3532,6 +3532,20 @@ class Player extends Entity {
       } else {
         this.state = this.state === 'walk' ? 'idle' : this.state;
       }
+      // 群压求生：被 ≥4 只怪贴脸时风筝后退，避免自动模式站桩被围殴致死（手动操作不受影响）
+      let _near = 0, _cx = 0, _cy = 0;
+      for (const _e of enemies) {
+        if (_e.state === 'dead') continue;
+        if (dist(this.x, this.y, _e.x, _e.y) < 110) { _near++; _cx += _e.x; _cy += _e.y; }
+      }
+      if (_near >= 4) {
+        _cx /= _near; _cy /= _near;
+        const _ang = Math.atan2(this.y - _cy, this.x - _cx);
+        tvx = Math.cos(_ang) * this.speed * 0.85 * (playerStats.moveSpeedPct || 1);
+        tvy = Math.sin(_ang) * this.speed * 0.85 * (playerStats.moveSpeedPct || 1);
+        this.state = 'walk';
+        this.dir = tvx !== 0 ? (tvx > 0 ? 1 : -1) : this.dir;
+      }
       }
     }
     // 速度缓动：帧率无关，移动更流畅
@@ -4119,6 +4133,8 @@ class Enemy extends Entity {
         const mid = this.minionId || curMap().monsters[0];
         const mdef = getMonsterDef(mid) || MONSTER_DEFS[0];
         for (let i = 0; i < cnt; i++) {
+          // 总硬上限保护：达到上限则跳过本次召唤，避免怪群无限膨胀（真机曾观测到 20→28 溢出）
+          if (enemies.filter(e => e.state !== 'dead').length >= ENEMY_HARD_CAP) break;
           const a = Math.PI * 2 * i / cnt;
           enemies.push(new Enemy(mdef, this.x + Math.cos(a) * 70, this.y + Math.sin(a) * 70));
         }
@@ -5843,8 +5859,10 @@ async function loadGame(slot) {
 }
 
 // ==================== 敌人生成 ====================
+const ENEMY_SOFT_CAP = 20;  // 普通环境刷怪上限（与 GDD 设计一致，避免怪群无限堆积）
+const ENEMY_HARD_CAP = 22;  // 含 Boss 召唤援军的总硬上限，防止多阶段召唤把怪群顶爆
 function spawnEnemy() {
-  if (enemies.filter(e => e.state !== 'dead').length >= 20) return;
+  if (enemies.filter(e => e.state !== 'dead').length >= ENEMY_SOFT_CAP) return;
   
   // 使用当前地图的怪物池
   const pool = (curMap().monsters || ['slime']).map(id => getMonsterDef(id)).filter(Boolean);
@@ -7556,8 +7574,9 @@ function render() {
       const sy = d.y - camera.y;
       const pulse = 0.5 + Math.sin(Date.now() / 200) * 0.3;
 
-      // 光圈
-      ctx.strokeStyle = d.equip.color;
+      // 光圈（装备用品质色，消耗品/材料用各自定义色；空安全避免 d.equip 为 undefined 时报错）
+      const glowColor = (d.equip && d.equip.color) || (d.item && d.item.color) || '#fff';
+      ctx.strokeStyle = glowColor;
       ctx.globalAlpha = pulse * 0.5;
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -7565,11 +7584,11 @@ function render() {
       ctx.stroke();
       ctx.globalAlpha = 1;
 
-      // 宝箱图标
+      // 掉落图标：装备显示宝箱，消耗品/材料显示各自图标
       ctx.font = '18px serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('📦', sx, sy);
+      ctx.fillText(d.item && d.item.icon ? d.item.icon : '📦', sx, sy);
     } else if (item.type === 'obstacle') {
       const o = item.entity;
       drawObstacle(ctx, o.x - camera.x, o.y - camera.y, o);
