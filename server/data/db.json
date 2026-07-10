@@ -61,6 +61,14 @@
         "675606effe6f56668ae308e54b00674a1cf7c3a0e417ab61": {
           "expires": 1786149344336,
           "remember": true
+        },
+        "1b4da3d1b70a97f7df53e294783a5a89b76c933b90b23474": {
+          "expires": 1786198334669,
+          "remember": true
+        },
+        "87b1e3fa943439cd386fa49ee07a85882476676ed85b70d8": {
+          "expires": 1786237492030,
+          "remember": true
         }
       },
       "createdAt": 1783506188332
@@ -130,20 +138,6 @@
         }
       },
       "createdAt": 1783527441026
-    },
-    "2d845ae6-0591-4578-bc52-7c7c5bdc2e4d": {
-      "id": "2d845ae6-0591-4578-bc52-7c7c5bdc2e4d",
-      "username": "TestPlayer",
-      "email": null,
-      "pwSalt": "7f90ad0930587d6af14924502184144a",
-      "pwHash": "f46316623e70a247bf29d5e7ee6aaef2eb1144f1324e9a73112a4c0f8b2e28c0422da7c50ef8f8cab5c8835d4fe11a3f1866a85a52631368c008941da0f3f799",
-      "emailVerified": false,
-      "verifyToken": null,
-      "verifyExpires": 0,
-      "resetToken": null,
-      "resetExpires": null,
-      "sessions": {},
-      "createdAt": 1783575134549
     }
   },
   "profiles": {
@@ -188,13 +182,92 @@
     "ed968b48-c297-4e52-a234-1c28ef02921e": {
       "userId": "ed968b48-c297-4e52-a234-1c28ef02921e",
       "class": "warrior",
-      "level": 13,
-      "exp": 72,
-      "expToNext": 985,
-      "gold": 1962,
+      "level": 26,
+      "exp": 8305,
+      "expToNext": 11735,
+      "gold": 14480,
       "equipment": {},
-      "backpack": [],
-      "mapIndex": 0,
+      "backpack": [
+        {
+          "uid": "1783645523625_gnueqw",
+          "slotKey": "ring1",
+          "slotName": "戒指",
+          "name": "破旧的装备",
+          "quality": "common",
+          "qualityName": "普通",
+          "color": "#aaaaaa",
+          "affixes": [
+            {
+              "id": "A01",
+              "cat": "A",
+              "name": "攻击力+",
+              "type": "atk",
+              "base": [
+                5,
+                15
+              ],
+              "qualityScale": true,
+              "displayValue": "267"
+            }
+          ],
+          "set": "swift",
+          "dura": 100,
+          "duraMax": 100,
+          "baseAtk": 7,
+          "baseDef": 4,
+          "weaponType": null,
+          "enhanceLevel": 0
+        },
+        {
+          "uid": "1783645532680_lg50fx",
+          "slotKey": "wing",
+          "slotName": "翅膀",
+          "name": "神秘的魔翼",
+          "quality": "rare",
+          "qualityName": "稀有",
+          "color": "#00aaff",
+          "affixes": [
+            {
+              "id": "C02",
+              "cat": "C",
+              "name": "暴击率 +2,6%",
+              "type": "critRate",
+              "val": [
+                0.02,
+                0.06
+              ],
+              "displayValue": "0.67"
+            },
+            {
+              "id": "C09",
+              "cat": "C",
+              "name": "连锁闪电",
+              "type": "chainLight",
+              "count": [
+                1,
+                3
+              ],
+              "displayValue": ""
+            },
+            {
+              "id": "E04",
+              "cat": "E",
+              "name": "出售价格+20%",
+              "type": "sellBonus",
+              "val": 0.2,
+              "displayValue": "140%"
+            }
+          ],
+          "set": null,
+          "dura": 100,
+          "duraMax": 100,
+          "baseAtk": 12,
+          "baseDef": 16,
+          "weaponType": null,
+          "enhanceLevel": 0
+        }
+      ],
+      "mapIndex": 2,
       "clearedMaps": [
         0
       ],
@@ -203,12 +276,17 @@
         "w_cri": 1,
         "w_hp1": 1,
         "w_def1": 1,
-        "w_rage": 1
+        "w_rage": 1,
+        "war_combat_t1": 1,
+        "war_combat_t2": 1,
+        "war_combat_t3": 2,
+        "war_combat_t4": 3,
+        "war_combat_t5": 4
       },
       "advancement": 1,
-      "skillPoints": 10,
+      "skillPoints": 7,
       "createdAt": 1783506188332,
-      "updatedAt": 1783557370650
+      "updatedAt": 1783645558239
     },
     "759b63da-6c7f-4427-8d2d-beee4256df4a": {
       "userId": "759b63da-6c7f-4427-8d2d-beee4256df4a",
@@ -277,23 +355,6 @@
       "skillPoints": 0,
       "createdAt": 1783527441026,
       "updatedAt": 1783527441026
-    },
-    "2d845ae6-0591-4578-bc52-7c7c5bdc2e4d": {
-      "userId": "2d845ae6-0591-4578-bc52-7c7c5bdc2e4d",
-      "class": null,
-      "level": 1,
-      "exp": 0,
-      "expToNext": 100,
-      "gold": 0,
-      "equipment": {},
-      "backpack": [],
-      "mapIndex": 0,
-      "clearedMaps": [],
-      "skillTree": {},
-      "advancement": 0,
-      "skillPoints": 0,
-      "createdAt": 1783575134549,
-      "updatedAt": 1783575134549
     }
   }
 }
