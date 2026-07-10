@@ -75,29 +75,187 @@ canvas {
   box-shadow: 0 0 10px rgba(255,210,74,0.45);
 }
 
+/* ═══════════ 自动化控制面板 ═══════════ */
+#auto-panel {
+  position: absolute;
+  left: 10px; bottom: 14px;
+  width: 188px;
+  z-index: 18;
+  background: linear-gradient(160deg, rgba(28,22,42,0.95), rgba(16,12,28,0.97));
+  border: 1px solid rgba(255,215,0,0.18);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  overflow: hidden;
+  user-select: none;
+}
+#auto-panel.collapsed #auto-body { display: none; }
+.auto-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; cursor: pointer;
+  font-size: 13px; font-weight: bold; color: #ffd700;
+  text-shadow: 0 0 8px rgba(255,200,0,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.auto-header .auto-chevron { transition: transform .2s; color: #b9b3c9; }
+#auto-panel.collapsed .auto-chevron { transform: rotate(-90deg); }
+#auto-body { padding: 8px 12px 12px; }
+.auto-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 0;
+}
+.auto-info { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #e6e0f0; }
+.auto-icon { font-size: 15px; }
+/* 开关 */
+.switch {
+  width: 40px; height: 22px; border-radius: 12px;
+  background: #3a3346; border: 1px solid rgba(255,255,255,0.12);
+  position: relative; cursor: pointer; transition: background .18s, border-color .18s;
+  flex: 0 0 auto;
+}
+.switch .knob {
+  position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #c9c2d8; transition: left .18s, background .18s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.switch.on { background: linear-gradient(180deg, #2faa3f, #1c7a2a); border-color: #4fdc6a; }
+.switch.on .knob { left: 20px; background: #eafff0; }
+.auto-hint { font-size: 9.5px; color: #8a7fb0; margin: -2px 0 4px; line-height: 1.3; }
+.auto-sub { margin: 2px 0 6px; padding-left: 2px; }
+/* 品质选择 chips */
+.q-chip {
+  display: inline-block; margin: 2px 3px 2px 0; padding: 3px 7px;
+  font-size: 10px; border-radius: 6px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04);
+  color: #cfc9dd; transition: all .12s;
+}
+.q-chip:hover { border-color: rgba(255,255,255,0.3); }
+.q-chip.active { font-weight: bold; box-shadow: 0 0 8px currentColor; }
+.auto-sub-label { font-size: 9.5px; color: #8a7fb0; margin: 4px 0 2px; }
+/* 技能列表（自动技能） */
+.skill-auto-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 0; font-size: 11px; color: #d8d2e8;
+}
+.skill-auto-row input[type=checkbox] { accent-color: #ffd24a; cursor: pointer; flex: 0 0 auto; }
+.skill-auto-row .sa-name { flex: 1; cursor: pointer; }
+.skill-auto-row .sa-prio {
+  font-size: 10px; color: #ffd700; background: #2a2038;
+  border: 1px solid #4a3a6a; border-radius: 4px; padding: 0 5px; cursor: pointer;
+}
+.skill-auto-row .sa-prio:hover { border-color: #ffd24a; }
+.skill-auto-row .sa-prio.disabled { opacity: .35; cursor: default; }
+
+/* ═══════════ 顶部状态面板 — 玻璃拟态 ARPG 风格 ═══════════ */
 #top-bar {
   position: absolute;
   top: 10px; left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 22px;
-  align-items: center;
-  padding: 8px 20px;
-  background: linear-gradient(180deg, rgba(40,34,58,0.94), rgba(20,17,32,0.94));
-  border: 1px solid rgba(255,215,0,0.22);
-  border-radius: 10px;
-  box-shadow: 0 6px 22px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
-  backdrop-filter: blur(4px);
+  gap: 0;
+  align-items: stretch;
+  padding: 0;
+  background: linear-gradient(135deg, rgba(28,22,42,0.92), rgba(16,12,28,0.96));
+  border: 1px solid rgba(255,215,0,0.18);
+  border-radius: 14px;
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.65),
+    0 2px 8px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 0 rgba(0,0,0,0.3);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
 }
-.stat-group { display: flex; flex-direction: column; align-items: center; min-width: 116px; }
-.stat-label { font-size: 11px; color: #b9b3c9; letter-spacing: 1px; }
-.hp-bar-container { width: 116px; height: 15px; background: linear-gradient(180deg,#3a0d0d,#220606); border-radius: 4px; overflow: hidden; border: 1px solid #5a1414; box-shadow: inset 0 1px 2px rgba(0,0,0,0.6); }
-.hp-bar-fill { height: 100%; background: linear-gradient(180deg,#6dff6d,#1e9e1e); box-shadow: 0 0 8px rgba(80,255,80,0.5); transition: width 0.3s; }
-.mp-bar-container { width: 116px; height: 11px; background: linear-gradient(180deg,#04183a,#020c1f); border-radius: 4px; overflow: hidden; border: 1px solid #12407a; box-shadow: inset 0 1px 2px rgba(0,0,0,0.6); }
-.mp-bar-fill { height: 100%; background: linear-gradient(180deg,#5ec8ff,#1666c8); box-shadow: 0 0 8px rgba(60,160,255,0.5); transition: width 0.3s; }
-.stat-text { font-size: 13px; color: #eee; margin-top: 3px; text-shadow: 0 1px 2px #000; }
-#player-name-top { color: #ffd700; font-weight: bold; font-size: 15px; text-shadow: 0 0 8px rgba(255,200,0,0.5); }
-#gold-display { color: #ffd700; font-size: 15px; text-shadow: 0 0 8px rgba(255,200,0,0.4); }
+/* 左侧：角色信息区 */
+.stat-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 140px;
+  padding: 10px 18px 8px;
+  border-right: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.02);
+}
+.stat-label { font-size: 11px; color: #9a8fb5; letter-spacing: 1.5px; text-transform: uppercase; }
+/* HP 条 — 精致分段式 */
+.hp-bar-container {
+  width: 140px; height: 18px;
+  background: linear-gradient(180deg, #2a0a0a, #1a0505);
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(180,60,60,0.35);
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.7),
+    0 1px 0 rgba(255,100,100,0.15);
+  position: relative;
+}
+.hp-bar-container::after {
+  /* 分段刻线 */
+  content: '';
+  position: absolute;
+  inset: 2px 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 27px,
+    rgba(0,0,0,0.25) 27px,
+    rgba(0,0,0,0.25) 28px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+.hp-bar-fill {
+  height: 100%;
+  background: linear-gradient(180deg, #5bff5b 0%, #22c922 40%, #158a15 100%);
+  box-shadow:
+    0 0 10px rgba(80,255,80,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.3);
+  transition: width 0.25s ease-out;
+  position: relative;
+  z-index: 1;
+}
+/* MP 条 */
+.mp-bar-container {
+  width: 140px; height: 12px;
+  background: linear-gradient(180deg, #081a30, #040c18);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(60,120,200,0.3);
+  box-shadow: inset 0 2px 3px rgba(0,0,0,0.7);
+  position: relative;
+  margin-top: 4px;
+}
+.mp-bar-fill {
+  height: 100%;
+  background: linear-gradient(180deg, #6adfff 0%, #2288dd 50%, #1155aa 100%);
+  box-shadow: 0 0 8px rgba(60,170,255,0.35);
+  transition: width 0.25s ease-out;
+  position: relative;
+  z-index: 1;
+}
+.stat-text {
+  font-size: 12px;
+  color: #d8d0e8;
+  margin-top: 2px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
+#player-name-top {
+  color: #ffd700;
+  font-weight: 700;
+  font-size: 16px;
+  text-shadow: 0 0 12px rgba(255,200,0,0.5), 0 2px 4px rgba(0,0,0,0.8);
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+#gold-display {
+  color: #ffd700;
+  font-size: 13px;
+  text-shadow: 0 0 6px rgba(255,200,0,0.35);
+}
 /* 底部技能栏 */
 #skill-bar {
   position: absolute;
@@ -458,18 +616,24 @@ canvas {
         <div class="hp-bar-container"><div class="hp-bar-fill" id="top-hp-bar" style="width:100%"></div></div>
         <span class="stat-text"><span id="top-hp-text">1000</span>/<span id="top-maxhp-text">1000</span></span>
         <div class="mp-bar-container"><div class="mp-bar-fill" id="top-mp-bar" style="width:100%"></div></div>
-        <span class="stat-text" style="color:#6cf;"><span id="top-mp-text">200</span>/<span id="top-maxmp-text">200</span></span>
+        <span class="stat-text" style="color:#8cf;"><span id="top-mp-text">200</span>/<span id="top-maxmp-text">200</span></span>
       </div>
-      <div style="border-left:1px solid #444;padding-left:14px;">
-        <span id="gold-display">💰 0</span><br>
-        <span id="token-display">🎫 0</span><br>
-        <span id="bindgold-display">🔒 0</span><br>
-        <span id="jade-display">💎 0</span><br>
-        <span id="ach-display">🏆 0</span><br>
-        <span style="font-size:10px;color:#888;">Lv.<span id="level-display">1</span> <span id="prof-display">战士</span></span><br>
-        <span id="map-name-display" style="font-size:12px;color:#ffd700;font-weight:bold;text-shadow:0 0 6px rgba(255,200,0,0.4);">比奇城郊</span><br>
-        <span id="diff-display" style="font-size:11px;cursor:pointer;" onclick="cycleDifficulty()">难度: <span id="diff-name">普通</span></span>
-        <span id="inflation-display" style="font-size:10px;color:#7f7;display:block;"></span>
+      <div style="border-left:1px solid rgba(255,255,255,0.07);padding:8px 14px;display:flex;flex-direction:column;gap:2px;min-width:120px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="gold-display">💰 0</span>
+          <span id="token-display" style="color:#c9a0ff;font-size:12px;">🎫 0</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span id="bindgold-display" style="color:#aaa;font-size:11px;">🔒 0</span>
+          <span id="jade-display" style="color:#7cf;font-size:11px;">💎 0</span>
+          <span id="ach-display" style="color:#fc6;font-size:11px;">🏆 0</span>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,0.06);margin-top:3px;padding-top:3px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:11px;color:#b98;color:var(--lvl-color,#9a8fb5);">Lv.<span id="level-display">1</span> <span id="prof-display" style="color:#c9b870;">战士</span></span>
+          <span id="diff-display" style="font-size:10px;cursor:pointer;color:#888;" onclick="cycleDifficulty()">难度: <span id="diff-name">普通</span></span>
+        </div>
+        <span id="map-name-display" style="font-size:11px;color:#ffd700;font-weight:600;text-shadow:0 0 6px rgba(255,200,0,0.3);letter-spacing:0.5px;">比奇城郊</span>
+        <span id="inflation-display" style="font-size:9px;color:#686;display:block;"></span>
       </div>
     </div>
 
@@ -2457,20 +2621,63 @@ function drawTerrainLayer(ctx, camX, camY, w, h) {
   }
   ctx.restore();
 
-  // 熔岩危险区（发光 + 脉动）
+  // 熔岩危险区 — 多层脉动环 + 核心 + 外溢光晕
   const tt = Date.now() / 1000;
   for (const hz of HAZARDS) {
     const sx = hz.x - camX, sy = hz.y - camY;
     if (sx + hz.r < 0 || sy + hz.r < 0 || sx - hz.r > w || sy - hz.r > h) continue;
-    const pulse = 0.85 + Math.sin(tt * 2 + hz.x) * 0.15;
-    const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, hz.r);
-    g.addColorStop(0, `rgba(255,190,70,${0.85 * pulse})`);
-    g.addColorStop(0.6, `rgba(230,90,20,${0.7 * pulse})`);
-    g.addColorStop(1, 'rgba(120,20,0,0)');
-    ctx.fillStyle = g;
+    const pulse = 0.82 + Math.sin(tt * 2.4 + hz.x * 0.01) * 0.18;
+    const rpulse = 0.7 + Math.sin(tt * 1.6 + hz.y * 0.01) * 0.3;
+
+    // ── 第3层：外溢光晕（大范围柔和辐射）──
+    const outerG = ctx.createRadialGradient(sx, sy, hz.r * 0.4, sx, sy, hz.r * 1.8);
+    outerG.addColorStop(0, `rgba(255,120,30,${0.12 * pulse})`);
+    outerG.addColorStop(0.6, `rgba(200,60,10,${0.06 * pulse})`);
+    outerG.addColorStop(1, 'rgba(150,30,0,0)');
+    ctx.fillStyle = outerG;
+    ctx.beginPath(); ctx.arc(sx, sy, hz.r * 1.8, 0, Math.PI * 2); ctx.fill();
+
+    // ── 第2层：主体熔岩池（径向渐变 + 脉动）──
+    const mainG = ctx.createRadialGradient(sx, sy, 0, sx, sy, hz.r);
+    mainG.addColorStop(0, `rgba(255,240,160,${0.95 * pulse})`);
+    mainG.addColorStop(0.25, `rgba(255,180,50,${0.88 * pulse})`);
+    mainG.addColorStop(0.6, `rgba(230,90,20,${0.72 * pulse})`);
+    mainG.addColorStop(0.85, `rgba(170,40,5,${0.45 * pulse})`);
+    mainG.addColorStop(1, 'rgba(100,15,0,0)');
+    ctx.fillStyle = mainG;
     ctx.beginPath(); ctx.arc(sx, sy, hz.r, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = `rgba(255,230,120,${0.6 * pulse})`;
+
+    // ── 脉动环（内环 + 外环）──
+    const ringR1 = hz.r * (0.55 + 0.08 * rpulse);
+    ctx.strokeStyle = `rgba(255,220,100,${0.45 * pulse})`;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.arc(sx, sy, ringR1, 0, Math.PI * 2); ctx.stroke();
+
+    const ringR2 = hz.r * (0.78 + 0.06 * Math.sin(tt * 3 + hz.x));
+    ctx.strokeStyle = `rgba(255,140,40,${0.3 * pulse})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(sx, sy, ringR2, 0, Math.PI * 2); ctx.stroke();
+
+    // ── 核心（最亮中心）──
+    const coreG = ctx.createRadialGradient(sx, sy, 0, sx, sy, hz.r * 0.28);
+    coreG.addColorStop(0, `rgba(255,255,220,${0.95 * pulse})`);
+    coreG.addColorStop(0.5, `rgba(255,230,120,${0.7 * pulse})`);
+    coreG.addColorStop(1, 'rgba(255,180,50,0)');
+    ctx.fillStyle = coreG;
     ctx.beginPath(); ctx.arc(sx, sy, hz.r * 0.28, 0, Math.PI * 2); ctx.fill();
+
+    // ── 岩浆粒子点缀（随机位置小亮点）──
+    const seed = Math.floor(hz.x * 13 + hz.y * 7) & 0xffff;
+    for (let i = 0; i < 4; i++) {
+      const angle = ((seed + i * 97) % 360) * Math.PI / 180 + tt * (0.3 + i * 0.15);
+      const dist = hz.r * (0.35 + ((seed + i * 43) % 100) / 100 * 0.45);
+      const px = sx + Math.cos(angle) * dist;
+      const py = sy + Math.sin(angle) * dist;
+      const pSize = 1.2 + Math.sin(tt * 4 + i * 2) * 0.8;
+      const pAlpha = 0.4 + 0.35 * Math.sin(tt * 3 + i * 1.7);
+      ctx.fillStyle = `rgba(255,240,180,${pAlpha * pulse})`;
+      ctx.beginPath(); ctx.arc(px, py, pSize, 0, Math.PI * 2); ctx.fill();
+    }
   }
 
   for (const b of TERRAIN_BLOBS) {
