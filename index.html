@@ -589,7 +589,9 @@ canvas {
 .adv-tag{font-size:12px;color:#8a7fb0;}
 
 /* ===== 游戏内账号菜单 ===== */
-#account-menu{position:absolute;top:10px;right:12px;z-index:20;display:flex;align-items:center;gap:8px;background:rgba(20,14,28,.8);border:1px solid #4a3a6a;border-radius:10px;padding:6px 10px;}
+#account-menu{position:absolute;top:10px;right:96px;z-index:100;display:flex;align-items:center;gap:8px;background:rgba(20,14,28,.8);border:1px solid #4a3a6a;border-radius:10px;padding:6px 10px;}
+#account-menu.collapsed .am-item{display:none;}
+#am-toggle{font-size:15px;line-height:1;}
 .acc-user{color:#ffd700;font-size:13px;font-weight:bold;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .am-btn{background:#2a2038;border:1px solid #4a3a6a;color:#eee;font-size:12px;padding:5px 10px;border-radius:7px;cursor:pointer;}
 .am-btn:hover{border-color:#ffd24a;}
@@ -1081,19 +1083,20 @@ canvas {
     </div>
   </div>
 
-  <!-- ===== 游戏内账号菜单 ===== -->
-  <div id="account-menu" style="display:none;">
-    <span id="acc-username" class="acc-user"></span>
-    <button class="am-btn" type="button" onclick="Account.openSkill()">技能</button>
-    <button class="am-btn" type="button" onclick="Account.openAdv()">进阶</button>
-    <button id="btn-archetype" class="am-btn" type="button" onclick="openArchetypePanel()" style="display:none">流派</button>
-    <button id="btn-attr" class="am-btn" type="button" onclick="openAttrPanel()">属性</button>
-    <button id="btn-reinc" class="am-btn" type="button" onclick="openReincPanel()" style="display:none">转生</button>
-    <button id="btn-rank" class="am-btn" type="button" onclick="openRankPanel()">排行</button>
-    <button id="btn-guild" class="am-btn" type="button" onclick="openGuildPanel()">公会</button>
-    <button id="btn-mount" class="am-btn" type="button" onclick="openMountPanel()">坐骑</button>
-    <button id="btn-core" class="am-btn" type="button" onclick="openCorePanel()">核心</button>
-    <button class="am-btn" type="button" onclick="Account.logout()">退出</button>
+  <!-- ===== 游戏内账号菜单（默认收起为 ☰，点击展开） ===== -->
+  <div id="account-menu" class="collapsed" style="display:none;">
+    <button id="am-toggle" class="am-btn" type="button" onclick="toggleAccountMenu()">☰</button>
+    <span id="acc-username" class="acc-user am-item"></span>
+    <button class="am-btn am-item" type="button" onclick="Account.openSkill()">技能</button>
+    <button class="am-btn am-item" type="button" onclick="Account.openAdv()">进阶</button>
+    <button id="btn-archetype" class="am-btn am-item" type="button" onclick="openArchetypePanel()" style="display:none">流派</button>
+    <button id="btn-attr" class="am-btn am-item" type="button" onclick="openAttrPanel()">属性</button>
+    <button id="btn-reinc" class="am-btn am-item" type="button" onclick="openReincPanel()" style="display:none">转生</button>
+    <button id="btn-rank" class="am-btn am-item" type="button" onclick="openRankPanel()">排行</button>
+    <button id="btn-guild" class="am-btn am-item" type="button" onclick="openGuildPanel()">公会</button>
+    <button id="btn-mount" class="am-btn am-item" type="button" onclick="openMountPanel()">坐骑</button>
+    <button id="btn-core" class="am-btn am-item" type="button" onclick="openCorePanel()">核心</button>
+    <button class="am-btn am-item" type="button" onclick="Account.logout()">退出</button>
   </div>
 
 </div>
@@ -6300,6 +6303,12 @@ function toggleBackpack() {
     renderBackpack();
     p.style.display = 'block';
   }
+}
+
+// 游戏内账号菜单：点击 ☰ 展开/收起（避免一排按钮压住背包/声音入口）
+function toggleAccountMenu() {
+  const m = document.getElementById('account-menu');
+  if (m) m.classList.toggle('collapsed');
 }
 
 // 词条展示：含 [占位] 的替换实际值，否则追加数值
