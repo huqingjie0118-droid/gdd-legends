@@ -1144,13 +1144,16 @@ function getDefaultWeaponType(prof) {
 const BAL = {
   // 升级曲线：经验基数与每级增长系数（原 100 / 1.20）
   EXP_BASE: 150,
-  EXP_GROWTH: 1.32,
+  EXP_GROWTH: 1.21,
   // 玩家每级属性成长系数（原 0.12）：放缓，使等级不再过早碾压，战力让位给装备
   PLAYER_SCALE: 0.08,
-  // 怪物随玩家等级缩放（解决“越级后内容无意义”）：每级 +4.5%，下限 0.75（前期更友好），上限 2.2
-  MON_LEVEL_SCALE: 0.045,
-  MON_LEVEL_FLOOR: 0.75,
-  MON_LEVEL_CAP: 2.2,
+  // 怪物随玩家等级缩放：每级 +7.0%，下限 0.78，上限 3.3
+  // —— 再平衡（2026-07-09）：原 EXP_GROWTH=1.32 使 Lv22 单级需 123 击杀形成升级墙；
+  //    下调增长系数 + 提高怪物经验缩放上限，使 Lv1→22 平滑（单级最高 ~15 击杀，总量 ~110）。
+  //    REWARD_SCALE 保持 7 不变，避免连带影响装备词缀数值。
+  MON_LEVEL_SCALE: 0.070,
+  MON_LEVEL_FLOOR: 0.78,
+  MON_LEVEL_CAP: 3.3,
   // 地图层难度递增（每张地图 +5%，制造阶段性挑战峰值；基础属性已按地图分层，此处为辅助叠加）
   MAP_DIFF_STEP: 0.05,
   // 精英怪：中后期随机出现，属性跃升形成地图内尖峰
@@ -1435,30 +1438,64 @@ MONSTER_DEFS.push(
   { id:'frostTroll', name:'冰霜巨魔', hp:14000, atk:210, def:85, exp:1800, gold:600, speed:44, aggro:320, color:'#7cc8ff', size:74, spriteKey:'orc',     isBoss:true, dropQualCommon:0.16, dropQualGood:0.24, dropQualRare:0.24, dropQualEpic:0.24, dropQualLegendary:0.10, dropQualMythic:0.02 },
 );
 
+// ==================== 数值重平衡（提升挑战性，削弱"割草"体验） ====================
+// 对"最终生效数值"（已含 等级 / 地图层 / 精英 / 难度 缩放）再乘一个 bulk 倍率
+// 普通怪按怪物强度分档：前期低倍率避免劝退，后期高倍率增强挑战
+// 精英 / Boss 提升幅度更大，并配套新增机制（精英狂暴 + Boss 狂暴阶段 + nova 冲击波）
+const MON_REBALANCE = {
+  // 普通怪：hpMult 3.0→5.0（随强度递增），atkMult 1.30→1.50
+  normal: {
+    slime:         { hp:3.0, atk:1.30 },
+    goblin:        { hp:3.0, atk:1.30 },
+    skeleton:      { hp:3.4, atk:1.34 },
+    zombie:        { hp:3.4, atk:1.34 },
+    orc:           { hp:4.0, atk:1.40 },
+    darkmage:      { hp:4.0, atk:1.40 },
+    fireElemental: { hp:4.0, atk:1.40 },
+    tiger:         { hp:4.5, atk:1.45 },
+    iceWolf:       { hp:4.5, atk:1.45 },
+    dragonWhelp:   { hp:5.0, atk:1.50 },
+  },
+  // 精英怪：HP 6× / ATK 1.45×  (兼具 ELITE_HP 1.8 倍，综合更厚)
+  elite: { hp:6.0, atk:1.45 },
+  // Boss：HP 6.5× / ATK 1.45×
+  boss:  { hp:6.5, atk:1.45 },
+};
+
 // 多阶段Boss战斗数据：每阶段含名称/攻击倍率/速度倍率/攻击模式/主题色
 // cast: Boss读条时间（秒），0=瞬发。读条时受击2倍失衡，率先破防=打断→额外伤害+15%
 const BOSS_DATA = {
   goblinKing: { minion:'goblin', phases:[
     { name:'鲁莽猛击', atkMult:1.0,  speedMult:1.0,  patterns:['melee','summon'], cd:1.6, summon:2, cast:0 },
     { name:'践踏震地', atkMult:1.35, speedMult:0.85, patterns:['smash','summon'], cd:2.0, summon:2, color:'#c73', cast:0.8 },
+    // 狂暴阶段（新增机制）：低血触发，nova 冲击 + 提速增攻
+    { name:'暴君狂怒', atkMult:1.7, speedMult:1.15, patterns:['smash','nova'], cd:1.6, color:'#f40', cast:0.5 },
   ]},
   corpseKing: { minion:'zombie', phases:[
     { name:'亡灵召唤', atkMult:1.0,  speedMult:1.0,  patterns:['melee','summon'], cd:1.7, summon:2, cast:0 },
     { name:'腐毒喷吐', atkMult:1.3,  speedMult:1.0,  patterns:['volley','smash'], cd:2.2, volley:4, color:'#9c4', cast:0.6 },
+    // 狂暴阶段（新增机制）：低血触发，nova 爆发 + 毒弹幕
+    { name:'亡语狂暴', atkMult:1.6, speedMult:1.1, patterns:['volley','nova'], cd:1.7, volley:5, color:'#f30', cast:0.5 },
   ]},
   flameLord: { minion:'fireElemental', phases:[
     { name:'烈焰焚身', atkMult:1.0,  speedMult:1.0,  patterns:['melee','volley'], cd:1.6, volley:3, cast:0.5 },
     { name:'熔岩冲锋', atkMult:1.3,  speedMult:1.2,  patterns:['charge','smash'], cd:2.2, color:'#f60', cast:0.6 },
     { name:'地狱火雨', atkMult:1.6,  speedMult:1.0,  patterns:['volley','summon'], cd:2.4, volley:6, summon:2, color:'#f30', cast:0.8 },
+    // 狂暴阶段（新增机制）：低血触发，nova + 火雨 + 召唤三连
+    { name:'焚天狂怒', atkMult:2.0, speedMult:1.2, patterns:['nova','volley','summon'], cd:1.9, volley:7, summon:2, color:'#f20', cast:0.6 },
   ]},
   frostTroll: { minion:'iceWolf', phases:[
     { name:'冰封重压', atkMult:1.0,  speedMult:1.0,  patterns:['smash','melee'], cd:1.8, cast:0.7 },
     { name:'极寒咆哮', atkMult:1.4,  speedMult:1.1,  patterns:['volley','charge'], cd:2.0, volley:5, color:'#7cf', cast:0.6 },
+    // 狂暴阶段（新增机制）：低血触发，nova 爆发 + 冲锋
+    { name:'永冻狂怒', atkMult:1.8, speedMult:1.2, patterns:['nova','charge'], cd:1.8, color:'#6cf', cast:0.5 },
   ]},
   dragon: { minion:'dragonWhelp', phases:[
     { name:'龙息灼烧', atkMult:1.0,  speedMult:1.0,  patterns:['volley','melee'], cd:1.6, volley:3, cast:0.5 },
     { name:'展翼冲撞', atkMult:1.35, speedMult:1.3,  patterns:['charge','smash'], cd:2.0, color:'#ff8', cast:0.6 },
     { name:'灭世龙焰', atkMult:1.7,  speedMult:1.1,  patterns:['volley','summon','smash'], cd:2.2, volley:7, summon:2, color:'#f40', cast:0.9 },
+    // 狂暴阶段（新增机制）：低血触发，nova + 龙焰弹幕 + 冲锋
+    { name:'灭世狂怒', atkMult:2.2, speedMult:1.25, patterns:['nova','volley','charge'], cd:2.0, volley:8, color:'#f10', cast:0.7 },
   ]},
 };
 
@@ -3245,27 +3282,103 @@ class Entity {
       roundRect(ctx, barX, barY, barW, barH, 3); ctx.stroke();
     }
 
-    // 名字标签（带底板）
+    // 名字标签（精致 ARPG 名称牌）
     if (this.name) {
-      const fs = Math.floor(this.size * 0.20);
-      ctx.font = `${this.isBoss ? 'bold ' : ''}${fs}px "Microsoft YaHei", sans-serif`;
+      const fs = Math.max(10, Math.floor(this.size * 0.20));
+      ctx.font = `${this.isBoss ? 'bold ' : ''}${fs}px "Microsoft YaHei", "PingFang SC", sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const txt = this.name;
       const tw = ctx.measureText(txt).width;
-      const padX = 7, padY = 3;
+      const padX = 10, padY = 4;
       const ny = sy + this.size * 0.55 + 14;
-      ctx.fillStyle = this.isPlayer ? 'rgba(70,45,20,0.85)' : (this.isBoss ? 'rgba(90,20,20,0.85)' : 'rgba(18,20,30,0.8)');
-      roundRect(ctx, sx - tw / 2 - padX, ny - fs / 2 - padY, tw + padX * 2, fs + padY * 2, 5); ctx.fill();
-      ctx.strokeStyle = this.isPlayer ? 'rgba(255,210,74,0.6)' : (this.isBoss ? 'rgba(255,120,120,0.7)' : 'rgba(255,255,255,0.15)');
+      const bx = sx - tw / 2 - padX, by = ny - fs / 2 - padY, bw = tw + padX * 2, bh = fs + padY * 2;
+
+      // 底板：按类型分色渐变
+      let bgGrad, borderColor, glowColor, textColor;
+      if (this.isPlayer) {
+        bgGrad = ctx.createLinearGradient(bx, by, bx, by + bh);
+        bgGrad.addColorStop(0, 'rgba(70,50,20,0.90)');
+        bgGrad.addColorStop(1, 'rgba(45,32,12,0.92)');
+        borderColor = 'rgba(255,210,74,0.45)';
+        glowColor = 'rgba(255,200,60,0.15)';
+        textColor = this.nameColor || '#ffd700';
+      } else if (this.isBoss) {
+        bgGrad = ctx.createLinearGradient(bx, by, bx, by + bh);
+        bgGrad.addColorStop(0, 'rgba(100,18,18,0.92)');
+        bgGrad.addColorStop(1, 'rgba(60,8,8,0.95)');
+        borderColor = 'rgba(255,80,80,0.6)';
+        glowColor = 'rgba(255,40,40,0.2)';
+        textColor = '#ff8888';
+      } else if (this.isElite) {
+        bgGrad = ctx.createLinearGradient(bx, by, bx, by + bh);
+        bgGrad.addColorStop(0, 'rgba(60,45,15,0.88)');
+        bgGrad.addColorStop(1, 'rgba(35,28,8,0.91)');
+        borderColor = 'rgba(255,200,60,0.4)';
+        glowColor = 'rgba(255,180,30,0.12)';
+        textColor = '#ffd23d';
+      } else {
+        bgGrad = ctx.createLinearGradient(bx, by, bx, by + bh);
+        bgGrad.addColorStop(0, 'rgba(18,22,34,0.85)');
+        bgGrad.addColorStop(1, 'rgba(10,13,22,0.88)');
+        borderColor = 'rgba(180,200,220,0.12)';
+        glowColor = 'rgba(100,160,220,0.08)';
+        textColor = this.nameColor || '#b8e0c8';
+      }
+
+      // 外发光
+      if (this.isBoss || this.isElite) {
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = 12;
+      }
+      // 填充底板
+      ctx.fillStyle = bgGrad;
+      roundRect(ctx, bx, by, bw, bh, 6); ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+
+      // 上边框高光线
+      ctx.strokeStyle = borderColor;
       ctx.lineWidth = 1;
-      roundRect(ctx, sx - tw / 2 - padX, ny - fs / 2 - padY, tw + padX * 2, fs + padY * 2, 5); ctx.stroke();
-      ctx.fillStyle = this.nameColor || '#cfc';
+      roundRect(ctx, bx, by, bw, bh, 6); ctx.stroke();
+
+      // 顶部高光条
+      const hlGrad = ctx.createLinearGradient(bx, by, bx + bw, by);
+      hlGrad.addColorStop(0, 'rgba(255,255,255,0)');
+      hlGrad.addColorStop(0.5, `rgba(255,255,255,${this.isBoss ? 0.12 : 0.06})`);
+      hlGrad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = hlGrad;
+      roundRect(ctx, bx + 1, by + 1, bw - 2, 3, 2); ctx.fill();
+
+      // 文字阴影 + 绘制
+      ctx.shadowColor = 'rgba(0,0,0,0.9)';
+      ctx.shadowBlur = 3;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 1;
+      ctx.fillStyle = textColor;
       ctx.fillText(txt, sx, ny);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+
+      // Boss 标签
       if (this.isBoss) {
-        ctx.font = `bold ${Math.floor(this.size * 0.15)}px "Microsoft YaHei", sans-serif`;
+        const bfs = Math.max(9, Math.floor(this.size * 0.14));
+        ctx.font = `bold ${bfs}px "Microsoft YaHei", sans-serif`;
+        const bossTxt = '【BOSS】';
+        const btw = ctx.measureText(bossTxt).width;
+        const bny = ny + fs + 8;
+        // Boss 标签底板
+        ctx.fillStyle = 'rgba(180,20,20,0.85)';
+        roundRect(ctx, sx - btw / 2 - 5, bny - bfs / 2 - 2, btw + 10, bfs + 4, 3); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,100,100,0.5)';
+        ctx.lineWidth = 0.7;
+        roundRect(ctx, sx - btw / 2 - 5, bny - bfs / 2 - 2, btw + 10, bfs + 4, 3); ctx.stroke();
         ctx.fillStyle = '#ffb0b0';
-        ctx.fillText('【BOSS】', sx, ny + fs + 9);
+        ctx.shadowColor = 'rgba(255,0,0,0.5)';
+        ctx.shadowBlur = 4;
+        ctx.fillText(bossTxt, sx, bny);
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
       }
     }
   }
@@ -3513,8 +3626,13 @@ class Enemy extends Entity {
     // 四档难度乘子：影响怪物 HP/ATK/DEF 与奖励
     const dm = diffMult();
     const dHp = dm.hpMult, dAtk = dm.atkMult, dDef = dm.defMult, dGold = dm.goldMult, dExp = dm.expMult;
-    const hpS = baseS * (elite ? BAL.ELITE_HP : 1) * dHp;
-    const atkS = baseS * (elite ? BAL.ELITE_ATK : 1) * dAtk;
+    // 数值重平衡 bulk（普通怪按强度分档 / 精英 / Boss），仅乘 HP 与 ATK，保留可击杀性（def 不动）
+    let bulkHp = 1, bulkAtk = 1;
+    if (isBoss) { bulkHp = MON_REBALANCE.boss.hp; bulkAtk = MON_REBALANCE.boss.atk; }
+    else if (elite) { bulkHp = MON_REBALANCE.elite.hp; bulkAtk = MON_REBALANCE.elite.atk; }
+    else if (MON_REBALANCE.normal[def.id]) { bulkHp = MON_REBALANCE.normal[def.id].hp; bulkAtk = MON_REBALANCE.normal[def.id].atk; }
+    const hpS = baseS * (elite ? BAL.ELITE_HP : 1) * dHp * bulkHp;
+    const atkS = baseS * (elite ? BAL.ELITE_ATK : 1) * dAtk * bulkAtk;
     const defS = baseS * (elite ? BAL.ELITE_ATK : 1) * dDef;
     const eDef = def.def || 5;
     const eMdef = def.mdef || Math.round(eDef * 0.6);
@@ -3544,6 +3662,9 @@ class Enemy extends Entity {
     }) * dGold);
     this.dropTable = def;
     this.isElite = elite;
+    // 精英狂暴（阶段变化机制）：HP<50% 触发一次，提速+增攻，并周期释放 radial 冲击波
+    this.eliteEnraged = false;
+    this.eliteSlamCd = rand(2.5, 4.0);
     this.mdef = Math.round(eMdef * defS);
     this.thorns = 0.05; // 怪物默认反伤
     // Boss 多阶段初始化
@@ -3589,7 +3710,23 @@ class Enemy extends Entity {
     const spd = this.speed * enemySpeedMult(this);
 
     const d = dist(this.x, this.y, target.x, target.y);
-    
+
+    // 精英狂暴（阶段变化机制）：HP 跌破 50% 触发一次，提速 +25%、增攻 +35%，并周期性释放冲击波
+    if (this.isElite && !this.eliteEnraged && this.hp < this.maxHp * 0.5) {
+      this.eliteEnraged = true;
+      this.speed *= 1.25;
+      this.atk *= 1.35;
+      screenShake = Math.max(screenShake, 8); hitStop = Math.max(hitStop, 0.04);
+      addFloatText(this.x, this.y - this.size - 12, '★ 精英狂暴!', '#ffd23d');
+    }
+    if (this.isElite && this.eliteEnraged) {
+      this.eliteSlamCd -= dt;
+      if (this.eliteSlamCd <= 0) {
+        this.eliteSlamCd = rand(3.0, 4.5);
+        if (typeof radialBlast === 'function') radialBlast(this, 120, 0.7, '#ffd23d');
+      }
+    }
+
     if (d < this.aggro) {
       // 追踪玩家
       this.state = 'walk';
@@ -3926,12 +4063,52 @@ class Enemy extends Entity {
         this.bossAtkTimer = ph.cd || 3;
         break;
       }
+      case 'nova': {
+        // 新增攻击模式：以 Boss 为中心的环形冲击波（AoE），半径内玩家受伤 + 粒子环 + 屏震
+        const radius = 170;
+        if (typeof radialBlast === 'function') radialBlast(this, radius, mult * 0.85, ph.color || this.bossColor || '#f84');
+        addFloatText(this.x, this.y - this.size - 12, '❆ 能量爆发!', '#ff5');
+        this.bossAtkTimer = ph.cd || 2.4;
+        break;
+      }
       default:
         this.bossAtkTimer = 1.5;
     }
   }
 }
 
+
+// ==================== 通用环形冲击波（精英狂暴 / Boss nova 共用） ====================
+// 以 src 为中心、radius 为半径的 AoE：命中范围内玩家并造成基于 atk 的伤害，附带粒子环与屏震
+function radialBlast(src, radius, mult, color) {
+  const col = color || '#f84';
+  if (player && player.state !== 'dead') {
+    const d = dist(src.x, src.y, player.x, player.y);
+    if (d < radius) {
+      const dmg = src.atk * mult * rand(0.85, 1.15) * (1 - (player.dmgReduce || 0)) * (1 - (playerStats.def / (playerStats.def + 50)) * 0.5);
+      player.hp -= Math.round(dmg);
+      onPlayerHitDura();
+      if (window.playerSetBonuses && window.playerSetBonuses.procs.reflect > 0) {
+        const back = Math.round(dmg * window.playerSetBonuses.procs.reflect);
+        src.hp -= back;
+        if (src.hp <= 0) { src.hp = 0; src.state = 'dead'; }
+        addFloatText(src.x, src.y - src.size, `⟲${back}`, '#c9a86a');
+      }
+      addFloatText(player.x, player.y - player.size, `-${Math.round(dmg)}`, '#f84');
+      spawnHitEffect(player.x, player.y - player.size * 0.3);
+      if (player.hp <= 0) { player.hp = 0; player.state = 'dead'; }
+    }
+  }
+  const n = 30;
+  for (let i = 0; i < n; i++) {
+    const a = Math.PI * 2 * i / n;
+    particles.push(new Particle(src.x, src.y, {
+      vx: Math.cos(a) * radius * 1.7, vy: Math.sin(a) * radius * 1.7, life: 0.5, size: rand(4, 8),
+      color: col, additive: true, friction: 0.82,
+    }));
+  }
+  screenShake = Math.max(screenShake, 14); hitStop = Math.max(hitStop, 0.05);
+}
 
 // ==================== 粒子系统 ====================
 class Particle {
