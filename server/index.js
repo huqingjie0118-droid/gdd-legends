@@ -3,6 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const auth = require('./auth');
+const db = require('./db');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, '..'); // h5-game 目录（游戏静态资源）
@@ -28,7 +29,7 @@ function sendJSON(res, code, obj) {
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
-    req.on('data', c => { data += c; if (data.length > 1e6) req.destroy(); });
+    req.on('data', c => { data += c; if (data.length > 5e6) req.destroy(); });
     req.on('end', () => {
       const ct = req.headers['content-type'] || '';
       try {
@@ -148,6 +149,37 @@ const server = http.createServer(async (req, res) => {
       const b = await readBody(req);
       const updated = auth.saveProfile(r.user.id, b);
       return sendJSON(res, 200, { ok: true, profile: updated });
+    }
+
+    // ---- 游戏存档（SQLite 持久化） ----
+    // 存档写入：{ slot, data } → 服务端为权威源，浏览器同时缓存 localStorage 作为离线兜底
+    if (p === '/api/save' && req.method === 'POST') {
+      let b;
+      try { b = await readBody(req); } catch (e) { return sendJSON(res, 400, { ok: false, error: '请求体解析失败' }); }
+      if (!b || typeof b.slot !== 'string' || !b.data) return sendJSON(res, 400, { ok: false, error: 'slot 与 data 必填' });
+      try {
+        db.setSave(b.slot, JSON.stringify(b.data));
+        return sendJSON(res, 200, { ok: true, updatedAt: Date.now() });
+      } catch (e) { return sendJSON(res, 500, { ok: false, error: '存档失败: ' + e.message }); }
+    }
+    // 存档读取：?slot= → 返回 { data }
+    if (p === '/api/load' && req.method === 'GET') {
+      const slot = u.searchParams.get('slot');
+      if (!slot) return sendJSON(res, 400, { ok: false, error: 'slot 必填' });
+      const s = db.getSave(slot);
+      if (!s) return sendJSON(res, 404, { ok: false, error: '无存档' });
+      return sendJSON(res, 200, { ok: true, data: s.data, updatedAt: s.updatedAt });
+    }
+    // 存档列表（调试用）
+    if (p === '/api/saves' && req.method === 'GET') {
+      return sendJSON(res, 200, { ok: true, saves: db.listSaves(), backend: db.backend });
+    }
+    // 删除存档
+    if (p === '/api/save' && req.method === 'DELETE') {
+      const slot = u.searchParams.get('slot');
+      if (!slot) return sendJSON(res, 400, { ok: false, error: 'slot 必填' });
+      db.deleteSave(slot);
+      return sendJSON(res, 200, { ok: true });
     }
 
     // 静态资源

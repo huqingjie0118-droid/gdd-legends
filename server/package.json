@@ -4,8 +4,8 @@
   "description": "传奇H5 账号与职业成长后端（零依赖：仅 Node 内置模块）",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node index.js"
+    "start": "node start.js",
+    "dev": "node start.js"
   },
   "engines": {
     "node": ">=18"
